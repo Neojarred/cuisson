@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,13 +32,13 @@ import app.cuisson.domain.Step
  */
 @Composable
 fun RecipeScreen(recipe: Recipe) {
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         LazyColumn(
             modifier = Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(recipe.title, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -81,8 +82,15 @@ private fun SectionHeading(text: String) {
 
 @Composable
 private fun IngredientRow(line: IngredientLine) {
-    Row(modifier = Modifier.padding(vertical = 4.dp)) {
-        Text(line.rawText, style = MaterialTheme.typography.bodyLarge)
+    Row(
+        modifier = Modifier.padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = line.rawText,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
         if (line.optional) {
             Spacer(Modifier.width(6.dp))
             Text(
