@@ -1,0 +1,16 @@
+# Planning documents. These hold commercial reasoning and questionnaire answers, and
+# being open source does not oblige anyone to publish them. See CLAUDE.md.
+/0*-*.md
+/Questions Answers.odt
+
+# Build output
+build/
+.gradle/
+local.properties
+captures/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store

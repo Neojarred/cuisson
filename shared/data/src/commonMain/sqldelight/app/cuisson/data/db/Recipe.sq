@@ -1,0 +1,94 @@
+-- Raw text is never discarded. Every table that holds parsed data also holds the text it
+-- was parsed from, so a better parser can be run over the library later. See adr/0004.
+
+CREATE TABLE recipe (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    title               TEXT    NOT NULL,
+    source_kind         TEXT    NOT NULL,
+    source_url          TEXT,
+    source_name         TEXT,
+    servings_count      REAL,
+    servings_unit       TEXT,
+    prep_minutes        INTEGER,
+    cook_minutes        INTEGER,
+    total_minutes       INTEGER,
+    notes               TEXT,
+    language            TEXT    NOT NULL DEFAULT 'en',
+    extraction_tier     TEXT    NOT NULL,
+    extraction_conf     REAL    NOT NULL DEFAULT 0.0,
+    needs_review        INTEGER NOT NULL DEFAULT 0,
+    created_at          INTEGER NOT NULL,
+    updated_at          INTEGER NOT NULL
+);
+
+-- A second import of an address we already hold should offer the recipe we have rather
+-- than duplicating it silently.
+CREATE INDEX recipe_source_url ON recipe(source_url);
+
+CREATE TABLE ingredient_line (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    recipe_id           TEXT    NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    position            INTEGER NOT NULL,
+    raw_text            TEXT    NOT NULL,
+    group_label         TEXT,
+    quantity_min        REAL,
+    quantity_max        REAL,
+    unit_canonical      TEXT,
+    unit_system         TEXT,
+    unit_alt_canonical  TEXT,
+    unit_alt_system     TEXT,
+    item_text           TEXT,
+    preparation         TEXT,
+    optional            INTEGER NOT NULL DEFAULT 0,
+    canonical_item_id   TEXT,
+    parse_confidence    REAL    NOT NULL DEFAULT 0.0
+);
+
+CREATE INDEX ingredient_line_recipe ON ingredient_line(recipe_id, position);
+
+CREATE TABLE step (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    recipe_id           TEXT    NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    position            INTEGER NOT NULL,
+    text                TEXT    NOT NULL,
+    duration_seconds    INTEGER,
+    -- Pointers the source made to material we did not capture, such as "see Note 3".
+    unresolved_refs     TEXT
+);
+
+CREATE INDEX step_recipe ON step(recipe_id, position);
+
+insertRecipe:
+INSERT OR REPLACE INTO recipe(
+    id, title, source_kind, source_url, source_name,
+    servings_count, servings_unit, prep_minutes, cook_minutes, total_minutes,
+    notes, language, extraction_tier, extraction_conf, needs_review,
+    created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertIngredientLine:
+INSERT OR REPLACE INTO ingredient_line(
+    id, recipe_id, position, raw_text, group_label,
+    quantity_min, quantity_max, unit_canonical, unit_system,
+    unit_alt_canonical, unit_alt_system, item_text, preparation,
+    optional, canonical_item_id, parse_confidence
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertStep:
+INSERT OR REPLACE INTO step(id, recipe_id, position, text, duration_seconds, unresolved_refs)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectAllRecipes:
+SELECT * FROM recipe ORDER BY updated_at DESC;
+
+selectRecipeById:
+SELECT * FROM recipe WHERE id = ?;
+
+selectIngredientsForRecipe:
+SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
+
+selectStepsForRecipe:
+SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
+
+countRecipes:
+SELECT count(*) FROM recipe;
