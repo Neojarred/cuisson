@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
 }
 
@@ -26,16 +25,6 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    sourceSets["main"].java.srcDirs("src/main/kotlin")
-}
-
-kotlin {
-    jvmToolchain(17)
 }
 
 dependencies {
@@ -45,7 +34,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.kotlinx.datetime)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

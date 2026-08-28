@@ -1,6 +1,6 @@
 package app.cuisson.domain
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlin.jvm.JvmInline
 
 /**

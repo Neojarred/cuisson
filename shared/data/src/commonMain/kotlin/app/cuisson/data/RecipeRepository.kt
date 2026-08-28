@@ -14,7 +14,7 @@ import app.cuisson.domain.SourceKind
 import app.cuisson.domain.Step
 import app.cuisson.domain.Timings
 import app.cuisson.domain.UnitSystem
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 private const val REF_SEPARATOR = "\n"
 

@@ -13,7 +13,7 @@ import app.cuisson.domain.SourceKind
 import app.cuisson.domain.Step
 import app.cuisson.domain.Timings
 import app.cuisson.domain.UnitSystem
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * The one recipe phase 0 puts on screen, written for this purpose rather than copied from
