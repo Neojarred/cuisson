@@ -41,6 +41,9 @@ class ImportActivity : ComponentActivity() {
                     state = state,
                     onUrlChanged = { state = ImportState.AskingForUrl(it) },
                     onSubmit = ::start,
+                    onTypeInstead = { state = ImportState.TypingText("", "") },
+                    onTypedChanged = { t, b -> state = ImportState.TypingText(t, b) },
+                    onParseTyped = ::parseTyped,
                     onSave = ::save,
                     onCancel = { finish() },
                     onOpenSettings = ::openAppSettings,
@@ -104,11 +107,22 @@ class ImportActivity : ComponentActivity() {
                     } else {
                         ImportState.Broke(outcome.describe)
                     }
-                is ImportOutcome.NotAUrl -> ImportState.Broke(
-                    "That does not look like a web address."
-                )
+                // Not an address, so it is presumably the recipe itself: someone
+                // selected text in another app and shared it here.
+                is ImportOutcome.NotAUrl ->
+                    reviewOf(Cuisson.importPipeline.fromText(outcome.input))
             }
         }
+    }
+
+    private fun reviewOf(outcome: ImportOutcome): ImportState = when (outcome) {
+        is ImportOutcome.Ready -> ImportState.Reviewing(outcome.draft, clean = true)
+        is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
+        else -> ImportState.Broke("That could not be read as a recipe.")
+    }
+
+    fun parseTyped(title: String, body: String) {
+        state = reviewOf(Cuisson.importPipeline.fromText(body, title.takeIf { it.isNotBlank() }))
     }
 
     /**
@@ -163,6 +177,9 @@ private const val IMPORT_LOG = "CuissonImport"
 
 sealed interface ImportState {
     data class AskingForUrl(val input: String) : ImportState
+
+    /** Typing or pasting the recipe itself, when there is no page to fetch. */
+    data class TypingText(val title: String, val body: String) : ImportState
     data class Working(val url: String) : ImportState
     data class Reviewing(val draft: DraftRecipe, val clean: Boolean) : ImportState
 

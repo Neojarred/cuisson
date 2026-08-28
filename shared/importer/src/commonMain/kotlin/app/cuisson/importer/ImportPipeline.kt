@@ -20,6 +20,16 @@ class ImportPipeline(val fetcher: RecipeFetcher) {
             is FetchResult.NotAUrl -> ImportOutcome.NotAUrl(fetched.input)
         }
 
+    /**
+     * Text somebody typed, pasted, or shared as a selection from another app.
+     *
+     * Always goes to the Review as needing a look, because the split between ingredients
+     * and method is inferred from how the lines are written and is sometimes wrong. It is
+     * never wrong in a way that loses a line, which is the part that matters.
+     */
+    fun fromText(text: String, title: String? = null): ImportOutcome =
+        ImportOutcome.NeedsWork(TextRecipeParser.parse(text, title))
+
     fun fromHtml(html: String, sourceUrl: String?): ImportOutcome {
         val structured = StructuredExtractor.extract(html, sourceUrl)
         if (structured != null && structured.looksUsable) {

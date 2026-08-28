@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,10 +38,21 @@ fun ImportScreen(
     onSave: (DraftRecipe) -> Unit,
     onCancel: () -> Unit,
     onOpenSettings: () -> Unit = {},
+    onTypeInstead: () -> Unit = {},
+    onTypedChanged: (String, String) -> Unit = { _, _ -> },
+    onParseTyped: (String, String) -> Unit = { _, _ -> },
 ) {
     Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         when (state) {
-            is ImportState.AskingForUrl -> AskForUrl(state.input, onUrlChanged, onSubmit, onCancel)
+            is ImportState.AskingForUrl ->
+                AskForUrl(state.input, onUrlChanged, onSubmit, onCancel, onTypeInstead)
+            is ImportState.TypingText -> TypeRecipe(
+                title = state.title,
+                body = state.body,
+                onChanged = onTypedChanged,
+                onDone = onParseTyped,
+                onCancel = onCancel,
+            )
             is ImportState.Working -> Working(state.url)
             is ImportState.Reviewing -> Review(state, onSave, onCancel)
             is ImportState.Refused -> Message(
@@ -74,6 +86,7 @@ private fun AskForUrl(
     onChanged: (String) -> Unit,
     onSubmit: (String) -> Unit,
     onCancel: () -> Unit,
+    onTypeInstead: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(20.dp)) {
         Spacer(Modifier.height(16.dp))
@@ -94,12 +107,67 @@ private fun AskForUrl(
             TextButton(onClick = onCancel) { Text("Cancel") }
         }
         Spacer(Modifier.height(24.dp))
+        TextButton(onClick = onTypeInstead, contentPadding = PaddingValues(0.dp)) {
+            Text("Paste or type the recipe instead")
+        }
+        Spacer(Modifier.height(8.dp))
         Text(
             text = "You can also share a link to Cuisson from your browser, which is " +
                 "usually quicker.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/**
+ * For a recipe with no page behind it: dictated by a relative, copied out of a message,
+ * or read off a card.
+ *
+ * One title and one block of text, because asking someone to sort their own ingredients
+ * from their own method before the app will accept it is exactly the data entry that
+ * makes people stop using these apps. Cuisson works out the split and the Review is where
+ * it gets corrected.
+ */
+@Composable
+private fun TypeRecipe(
+    title: String,
+    body: String,
+    onChanged: (String, String) -> Unit,
+    onDone: (String, String) -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Text("Type or paste a recipe", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(
+            value = title,
+            onValueChange = { onChanged(it, body) },
+            label = { Text("Title") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = body,
+            onValueChange = { onChanged(title, it) },
+            label = { Text("Ingredients and method") },
+            modifier = Modifier.fillMaxWidth().weight(1f),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Paste it however it is written. Headings help but are not needed.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { onDone(title, body) }, enabled = body.isNotBlank()) {
+                Text("Continue")
+            }
+            TextButton(onClick = onCancel) { Text("Cancel") }
+        }
     }
 }
 
@@ -150,6 +218,9 @@ private fun Review(
     onSave: (DraftRecipe) -> Unit,
     onCancel: () -> Unit,
     onOpenSettings: () -> Unit = {},
+    onTypeInstead: () -> Unit = {},
+    onTypedChanged: (String, String) -> Unit = { _, _ -> },
+    onParseTyped: (String, String) -> Unit = { _, _ -> },
 ) {
     val draft = state.draft
     Column(modifier = Modifier.fillMaxSize()) {
