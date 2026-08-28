@@ -14,3 +14,7 @@ captures/
 .idea/
 *.iml
 .DS_Store
+
+# Real pages fetched for measuring extraction coverage. Other people's content,
+# kept out of the repository. Test fixtures are synthetic and live in the test resources.
+/corpus/
