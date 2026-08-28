@@ -27,6 +27,7 @@
         <activity
             android:name=".ImportActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:label="Save to Cuisson">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

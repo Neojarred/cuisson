@@ -32,10 +32,17 @@ class RecipeFetcher(private val client: HttpClient) {
                     finalUrl = response.request.url.toString(),
                 )
                 status in BLOCKING_STATUSES -> FetchResult.Blocked(status, url)
+                // Non-standard codes, which Cloudflare and friends emit freely, carry an
+                // empty description. The number is then the only thing worth saying.
                 else -> FetchResult.Failed(status, response.status.description)
             }
         } catch (error: Throwable) {
-            FetchResult.Failed(status = null, reason = error.message ?: "network error")
+            // Some failures arrive with no message at all, and "import failed" with a
+            // blank line underneath tells nobody anything. The exception's own name is
+            // usually the most informative thing available.
+            val message = error.message?.takeIf { it.isNotBlank() }
+            val kind = error::class.simpleName ?: "error"
+            FetchResult.Failed(status = null, reason = message?.let { "$kind: $it" } ?: kind)
         }
     }
 

@@ -16,7 +16,7 @@ class ImportPipeline(private val fetcher: RecipeFetcher) {
         when (val fetched = fetcher.fetch(rawUrl)) {
             is FetchResult.Success -> fromHtml(fetched.html, fetched.finalUrl)
             is FetchResult.Blocked -> ImportOutcome.Blocked(fetched.status, fetched.url)
-            is FetchResult.Failed -> ImportOutcome.Failed(fetched.reason)
+            is FetchResult.Failed -> ImportOutcome.Failed(fetched.status, fetched.reason)
             is FetchResult.NotAUrl -> ImportOutcome.NotAUrl(fetched.input)
         }
 
@@ -47,6 +47,11 @@ sealed interface ImportOutcome {
      */
     data class Blocked(val status: Int, val url: String) : ImportOutcome
 
-    data class Failed(val reason: String) : ImportOutcome
+    data class Failed(val status: Int?, val reason: String) : ImportOutcome {
+        val describe: String
+            get() = listOfNotNull(status?.let { "HTTP $it" }, reason.takeIf { it.isNotBlank() })
+                .joinToString(": ")
+                .ifBlank { "the request did not complete" }
+    }
     data class NotAUrl(val input: String) : ImportOutcome
 }

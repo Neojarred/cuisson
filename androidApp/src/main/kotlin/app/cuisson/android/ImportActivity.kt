@@ -2,6 +2,7 @@ package app.cuisson.android
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,9 +31,7 @@ class ImportActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val shared = sharedTextFrom(intent)
-        if (shared != null) start(shared) else state = ImportState.AskingForUrl("")
+        handle(intent)
 
         setContent {
             CuissonTheme {
@@ -47,6 +46,23 @@ class ImportActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Sharing a second link while this screen is open delivers a new intent to the
+     * running activity rather than creating another one. Without this the app would sit
+     * showing the previous recipe and appear to have ignored the share.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handle(intent)
+    }
+
+    private fun handle(intent: Intent?) {
+        val shared = sharedTextFrom(intent)
+        state = if (shared != null) ImportState.Working(shared) else ImportState.AskingForUrl("")
+        if (shared != null) start(shared)
+    }
+
     private fun sharedTextFrom(intent: Intent?): String? = when (intent?.action) {
         Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
         Intent.ACTION_VIEW -> intent.dataString
@@ -56,15 +72,34 @@ class ImportActivity : ComponentActivity() {
     private fun start(input: String) {
         state = ImportState.Working(input)
         lifecycleScope.launch {
-            state = when (val outcome = Cuisson.importPipeline.importUrl(input)) {
+            val outcome = Cuisson.importPipeline.importUrl(input)
+            Log.i(IMPORT_LOG, describeForLog(input, outcome))
+            state = when (outcome) {
                 is ImportOutcome.Ready -> ImportState.Reviewing(outcome.draft, clean = true)
                 is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
                 is ImportOutcome.Blocked -> ImportState.Refused(outcome.status, outcome.url)
-                is ImportOutcome.Failed -> ImportState.Broke(outcome.reason)
+                is ImportOutcome.Failed -> ImportState.Broke(outcome.describe)
                 is ImportOutcome.NotAUrl -> ImportState.Broke(
                     "That does not look like a web address."
                 )
             }
+        }
+    }
+
+    /**
+     * One line per import, so a run over many sites can be measured from the device
+     * rather than from a desktop whose TLS fingerprint sites treat differently.
+     */
+    private fun describeForLog(input: String, outcome: ImportOutcome): String {
+        val host = Regex("https?://([^/]+)").find(input)?.groupValues?.get(1) ?: input.take(40)
+        return when (outcome) {
+            is ImportOutcome.Ready -> "OK       $host ing=${outcome.draft.ingredientLines.size} " +
+                "steps=${outcome.draft.steps.size} warn=${outcome.draft.warnings.size}"
+            is ImportOutcome.NeedsWork -> "THIN     $host tier=${outcome.draft.tier} " +
+                "ing=${outcome.draft.ingredientLines.size}"
+            is ImportOutcome.Blocked -> "BLOCKED  $host status=${outcome.status}"
+            is ImportOutcome.Failed -> "FAILED   $host ${outcome.describe.take(60)}"
+            is ImportOutcome.NotAUrl -> "NOTAURL  $input"
         }
     }
 
@@ -75,6 +110,8 @@ class ImportActivity : ComponentActivity() {
         finish()
     }
 }
+
+private const val IMPORT_LOG = "CuissonImport"
 
 sealed interface ImportState {
     data class AskingForUrl(val input: String) : ImportState
