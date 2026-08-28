@@ -1,4 +1,4 @@
-# Hestia
+# Cuisson
 
 An Android recipe app that keeps a person's recipes on their own device. It imports
 recipes from the structured data that recipe sites already publish, helps decide what to
@@ -10,12 +10,12 @@ in `05-architecture.md`, decisions in `docs/adr/`, working agreements in `CLAUDE
 ## Recipes
 
 **Recipe**:
-A dish as Hestia stores it, with its ingredients, steps and provenance. Always belongs to
+A dish as Cuisson stores it, with its ingredients, steps and provenance. Always belongs to
 the person who imported it.
 _Avoid_: entry, item, dish, card
 
 **Raw Text**:
-The exact text a recipe arrived as, kept forever and never edited by Hestia. Everything
+The exact text a recipe arrived as, kept forever and never edited by Cuisson. Everything
 parsed is an overlay on top of it.
 _Avoid_: original, source text, raw data
 
@@ -58,7 +58,7 @@ so nothing is ever homeless, and never asks to be emptied.
 _Avoid_: inbox, uncategorised, default cookbook
 
 **Recipe Card**:
-A generated image of a recipe, made for posting somewhere outside Hestia. Uses a User
+A generated image of a recipe, made for posting somewhere outside Cuisson. Uses a User
 Image or no image at all, never a Source Image.
 _Avoid_: share image, export image
 
@@ -76,7 +76,7 @@ _Avoid_: cook log, history entry
 ## Import
 
 **Import**:
-The act of turning something outside Hestia into a Recipe. Always ends at the Review.
+The act of turning something outside Cuisson into a Recipe. Always ends at the Review.
 _Avoid_: scrape, clip, capture, save
 
 **Structured Extraction**:
@@ -166,7 +166,7 @@ The period during which an unpaid installation behaves exactly like a paid one.
 _Avoid_: free tier, freemium, demo
 
 **Read-Only Mode**:
-What Hestia becomes when the Trial ends without a purchase. Everything already saved stays
+What Cuisson becomes when the Trial ends without a purchase. Everything already saved stays
 visible and exportable. Nothing new can be written.
 _Avoid_: locked, expired, limited mode
 
@@ -186,12 +186,12 @@ _Avoid_: dump, backup file, archive
 
 ## Words we do not use
 
-**Pantry**, **stock**, **inventory**: Hestia does not track what you have. Decided in Q29.
+**Pantry**, **stock**, **inventory**: Cuisson does not track what you have. Decided in Q29.
 
 **Meal Plan**: deferred indefinitely. The Shopping List is expected to cover it, per Q37.
 
-**Account**, **sign-up**, **login**: Hestia has no accounts. A Google account may be used
+**Account**, **sign-up**, **login**: Cuisson has no accounts. A Google account may be used
 as a Sync Target and to hold the Unlock, which is not the same thing.
 
-**Discovery**, **recipe search**: Hestia does not search other people's sites. Decided
+**Discovery**, **recipe search**: Cuisson does not search other people's sites. Decided
 in D2.

@@ -1,6 +1,6 @@
 # No recipe discovery, and every fetch is user-initiated from their own device
 
-Hestia does not search, browse or index other people's recipe sites. It fetches a page
+Cuisson does not search, browse or index other people's recipe sites. It fetches a page
 only when the user hands it a specific URL, from the user's own device and IP address,
 which is what a browser does. An in-app browser was considered and rejected as clutter;
 the Android share sheet does the same job with fewer taps and no interface of ours.
