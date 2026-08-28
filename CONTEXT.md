@@ -180,7 +180,7 @@ folder, or nothing at all.
 _Avoid_: cloud, server, backend, account
 
 **Export File**:
-A single versioned `.hestia` archive holding every recipe including Raw Text, plus images.
+A single versioned `.cuisson` archive holding every recipe including Raw Text, plus images.
 The promise that the user's data is theirs.
 _Avoid_: dump, backup file, archive
 
