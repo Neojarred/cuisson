@@ -30,6 +30,9 @@ android {
 dependencies {
     implementation(project(":shared:domain"))
     implementation(project(":shared:data"))
+    implementation(project(":shared:importer"))
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

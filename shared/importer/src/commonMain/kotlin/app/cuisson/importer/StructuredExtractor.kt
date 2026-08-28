@@ -42,9 +42,9 @@ object StructuredExtractor {
         }
 
         val servings = readServings(recipe["recipeYield"], warnings)
-        val total = parseIsoDurationMinutes(recipe["totalTime"].firstString())
-        val prep = parseIsoDurationMinutes(recipe["prepTime"].firstString())
-        val cook = parseIsoDurationMinutes(recipe["cookTime"].firstString())
+        val total = parseDurationMinutes(recipe["totalTime"].firstString())
+        val prep = parseDurationMinutes(recipe["prepTime"].firstString())
+        val cook = parseDurationMinutes(recipe["cookTime"].firstString())
         if (total == null && prep == null && cook == null && recipe["totalTime"] != null) {
             warnings += ExtractionWarning.DURATION_NOT_UNDERSTOOD
         }
@@ -160,5 +160,14 @@ object StructuredExtractor {
  * Strips any markup a publisher embedded and decodes HTML entities, so "&frac12; tsp"
  * and "<p>Simmer</p>" become what a person would have written.
  */
-internal fun cleanText(raw: String): String =
-    Ksoup.parse(raw).text().replace(' ', ' ').trim()
+internal fun cleanText(raw: String): String {
+    // Publishers double encode. One pass over 750g's method leaves "p&acirc;tes" on
+    // screen, so decoding repeats until it stops changing anything.
+    var text = raw
+    repeat(3) {
+        val decoded = Ksoup.parse(text).text()
+        if (decoded == text) return@repeat
+        text = decoded
+    }
+    return text.replace(' ', ' ').trim()
+}

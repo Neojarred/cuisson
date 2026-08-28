@@ -43,3 +43,47 @@ class IsoDurationTest {
         assertNull(parseIsoDurationMinutes("1:15"))
     }
 }
+
+/**
+ * Every case here was found by running the extractor over real pages, not by reading the
+ * schema.org specification, which none of these publishers followed.
+ */
+class RealWorldDurationTest {
+
+    @Test
+    fun `a duration given entirely in seconds is not thrown away`() {
+        // The Kitchn publishes PT2400S. An earlier version of this parser scored it zero.
+        assertEquals(40, parseDurationMinutes("PT2400S"))
+    }
+
+    @Test
+    fun `plain english durations are read`() {
+        // Bon Appetit and Epicurious both ignore ISO 8601 entirely.
+        assertEquals(35, parseDurationMinutes("35 minutes"))
+        assertEquals(20, parseDurationMinutes("20 minutes"))
+        assertEquals(90, parseDurationMinutes("1 hour 30 minutes"))
+        assertEquals(75, parseDurationMinutes("1 hr 15 min"))
+        assertEquals(60, parseDurationMinutes("1 hour"))
+    }
+
+    @Test
+    fun `french durations are read`() {
+        assertEquals(45, parseDurationMinutes("45 minutes"))
+        assertEquals(90, parseDurationMinutes("1 heure 30 minutes"))
+        assertEquals(90, parseDurationMinutes("1 h 30"))
+    }
+
+    @Test
+    fun `iso is still preferred and still works`() {
+        assertEquals(75, parseDurationMinutes("PT1H15M"))
+        assertEquals(200, parseDurationMinutes("PT200M"))
+    }
+
+    @Test
+    fun `prose that merely contains a number is not a duration`() {
+        assertNull(parseDurationMinutes("serves 4 people"))
+        assertNull(parseDurationMinutes("about an hour, give or take"))
+        assertNull(parseDurationMinutes(""))
+        assertNull(parseDurationMinutes(null))
+    }
+}

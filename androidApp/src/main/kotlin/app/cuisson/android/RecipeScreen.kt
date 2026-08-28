@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,14 +34,19 @@ import app.cuisson.domain.Step
  * "5 clove garlic". See docs/adr/0004.
  */
 @Composable
-fun RecipeScreen(recipe: Recipe) {
+fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
     Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         LazyColumn(
             modifier = Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
+                    Text("Back")
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(recipe.title, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(

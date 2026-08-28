@@ -60,4 +60,19 @@ data class Extraction(
     val needsReview: Boolean,
 )
 
-enum class ExtractionTier { STRUCTURED, SITE_RULE, MODEL, HAND_WRITTEN }
+enum class ExtractionTier {
+    /** Read from the machine-readable recipe the site publishes. The main path. */
+    STRUCTURED,
+
+    /** Read using a stored rule for a site that publishes no structured data. */
+    SITE_RULE,
+
+    /** Assembled by a language model from something with no structure to read. */
+    MODEL,
+
+    /** Nothing could be extracted, so the page text was kept for the user to salvage. */
+    PAGE_TEXT,
+
+    /** Typed in by the user. */
+    HAND_WRITTEN,
+}
