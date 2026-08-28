@@ -8,6 +8,9 @@ import app.cuisson.importer.ImportPipeline
 import app.cuisson.importer.RecipeFetcher
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * The application's few long-lived objects.
@@ -31,4 +34,13 @@ object Cuisson {
     val importPipeline: ImportPipeline by lazy {
         ImportPipeline(RecipeFetcher(HttpClient(OkHttp)))
     }
+
+    /**
+     * For work that must outlive the screen that started it.
+     *
+     * Downloading a recipe's picture belongs here rather than in an activity's scope: the
+     * user presses Save and the screen closes immediately, and tying the download to that
+     * screen cancels it the moment it starts.
+     */
+    val background: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 }

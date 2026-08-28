@@ -3,6 +3,7 @@ package app.cuisson.importer
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.request
 import io.ktor.http.Url
@@ -44,6 +45,21 @@ class RecipeFetcher(private val client: HttpClient) {
             val kind = error::class.simpleName ?: "error"
             FetchResult.Failed(status = null, reason = message?.let { "$kind: $it" } ?: kind)
         }
+    }
+
+    /**
+     * Downloads an image so the recipe works offline.
+     *
+     * The copy stays on the device and travels only in the user's own export, per
+     * ADR-0007. Nothing here ever puts it in front of anyone else.
+     */
+    suspend fun fetchBytes(rawUrl: String, maxBytes: Int = 4 * 1024 * 1024): ByteArray? {
+        val url = normalise(rawUrl) ?: return null
+        return runCatching {
+            val response = client.get(url) { header("User-Agent", BROWSER_USER_AGENT) }
+            if (response.status.value !in 200..299) return null
+            response.bodyAsBytes().takeIf { it.size in 1..maxBytes }
+        }.getOrNull()
     }
 
     /** People paste addresses with no scheme, and share sheets deliver text around them. */

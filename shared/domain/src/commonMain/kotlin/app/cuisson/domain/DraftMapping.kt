@@ -39,6 +39,7 @@ fun DraftRecipe.toRecipe(id: String, now: Instant): Recipe = Recipe(
         )
     },
     notes = null,
+    imagePath = null,
     language = language ?: "en",
     extraction = Extraction(
         tier = tier,

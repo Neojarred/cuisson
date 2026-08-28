@@ -1,7 +1,9 @@
 package app.cuisson.android
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -41,6 +43,7 @@ class ImportActivity : ComponentActivity() {
                     onSubmit = ::start,
                     onSave = ::save,
                     onCancel = { finish() },
+                    onOpenSettings = ::openAppSettings,
                 )
             }
         }
@@ -63,6 +66,23 @@ class ImportActivity : ComponentActivity() {
         if (shared != null) start(shared)
     }
 
+    /**
+     * Whether a failure happened before any server was reached.
+     *
+     * These two causes cannot be told apart from inside the app. The device may be
+     * offline, or this app in particular may have been denied the network, which
+     * GrapheneOS allows per app and enforces in the network stack: checkSelfPermission
+     * still answers "granted" while every connection fails, and ConnectivityManager
+     * reports no network at all because we are not allowed to see one.
+     *
+     * So the message names both possibilities instead of guessing at one. Being told the
+     * wrong cause confidently is worse than being told two and shown where to look.
+     */
+    private fun failedBeforeReachingAnyServer(reason: String): Boolean = listOf(
+        "UnknownHostException", "ConnectException", "SecurityException",
+        "SocketException", "NoRouteToHost", "UnresolvedAddress",
+    ).any { reason.contains(it, ignoreCase = true) }
+
     private fun sharedTextFrom(intent: Intent?): String? = when (intent?.action) {
         Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
         Intent.ACTION_VIEW -> intent.dataString
@@ -78,7 +98,12 @@ class ImportActivity : ComponentActivity() {
                 is ImportOutcome.Ready -> ImportState.Reviewing(outcome.draft, clean = true)
                 is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
                 is ImportOutcome.Blocked -> ImportState.Refused(outcome.status, outcome.url)
-                is ImportOutcome.Failed -> ImportState.Broke(outcome.describe)
+                is ImportOutcome.Failed ->
+                    if (failedBeforeReachingAnyServer(outcome.describe)) {
+                        ImportState.NoNetworkPermission
+                    } else {
+                        ImportState.Broke(outcome.describe)
+                    }
                 is ImportOutcome.NotAUrl -> ImportState.Broke(
                     "That does not look like a web address."
                 )
@@ -105,9 +130,32 @@ class ImportActivity : ComponentActivity() {
 
     private fun save(draft: DraftRecipe) {
         val recipe = draft.toRecipe(UUID.randomUUID().toString(), Clock.System.now())
-        Cuisson.repository(this).save(recipe)
+        val repository = Cuisson.repository(this)
+        repository.save(recipe)
         Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+
+        // The picture is fetched after saving rather than before it, so a slow or
+        // missing image never costs the user the recipe. It runs on the application's
+        // scope because this screen is about to close, and a download tied to it would
+        // be cancelled before it began.
+        draft.imageUrl?.let { url ->
+            val store = ImageStore(applicationContext)
+            Cuisson.background.launch {
+                Cuisson.importPipeline.fetcher.fetchBytes(url)?.let { bytes ->
+                    repository.setImagePath(recipe.id, store.write(recipe.id.value, bytes))
+                }
+            }
+        }
         finish()
+    }
+
+    fun openAppSettings() {
+        startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null),
+            )
+        )
     }
 }
 
@@ -121,4 +169,7 @@ sealed interface ImportState {
     /** The site refused us. Distinct from a failure because the advice differs. */
     data class Refused(val status: Int, val url: String) : ImportState
     data class Broke(val reason: String) : ImportState
+
+    /** Only reachable where INTERNET is revocable, which in practice means GrapheneOS. */
+    data object NoNetworkPermission : ImportState
 }

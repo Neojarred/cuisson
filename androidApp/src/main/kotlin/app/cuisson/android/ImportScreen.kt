@@ -36,6 +36,7 @@ fun ImportScreen(
     onSubmit: (String) -> Unit,
     onSave: (DraftRecipe) -> Unit,
     onCancel: () -> Unit,
+    onOpenSettings: () -> Unit = {},
 ) {
     Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         when (state) {
@@ -48,6 +49,15 @@ fun ImportScreen(
                     "the site's decision and nothing you can change. Copying the recipe " +
                     "text and pasting it will still work.",
                 onCancel = onCancel,
+            )
+            is ImportState.NoNetworkPermission -> Message(
+                heading = "Cuisson could not reach the network",
+                body = "The request never got as far as a server. Either this device is " +
+                    "offline, or Cuisson has been denied the network: some Android " +
+                    "systems let you decide that for each app, and it can be switched " +
+                    "off without you noticing.",
+                onCancel = onCancel,
+                action = "Open settings" to onOpenSettings,
             )
             is ImportState.Broke -> Message(
                 heading = "That did not work",
@@ -107,14 +117,24 @@ private fun Working(url: String) {
 }
 
 @Composable
-private fun Message(heading: String, body: String, onCancel: () -> Unit) {
+private fun Message(
+    heading: String,
+    body: String,
+    onCancel: () -> Unit,
+    action: Pair<String, () -> Unit>? = null,
+) {
     Column(modifier = Modifier.padding(20.dp)) {
         Spacer(Modifier.height(16.dp))
         Text(heading, style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(12.dp))
         Text(body, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(20.dp))
-        Button(onClick = onCancel) { Text("Close") }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            action?.let { (label, onClick) ->
+                Button(onClick = onClick) { Text(label) }
+            }
+            TextButton(onClick = onCancel) { Text("Close") }
+        }
     }
 }
 
@@ -129,6 +149,7 @@ private fun Review(
     state: ImportState.Reviewing,
     onSave: (DraftRecipe) -> Unit,
     onCancel: () -> Unit,
+    onOpenSettings: () -> Unit = {},
 ) {
     val draft = state.draft
     Column(modifier = Modifier.fillMaxSize()) {

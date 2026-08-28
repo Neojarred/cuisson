@@ -1,6 +1,12 @@
 package app.cuisson.data
 
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
 import app.cuisson.data.db.CuissonDatabase
+import app.cuisson.data.db.Recipe as Recipe_
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import app.cuisson.domain.Extraction
 import app.cuisson.domain.ExtractionTier
 import app.cuisson.domain.IngredientLine
@@ -24,9 +30,25 @@ class RecipeRepository(private val database: CuissonDatabase) {
 
     fun count(): Long = queries.countRecipes().executeAsOne()
 
-    fun all(): List<Recipe> = queries.selectAllRecipes().executeAsList().map { row ->
+    /**
+     * The library, kept current.
+     *
+     * A recipe's picture is downloaded a moment after the recipe itself is saved, so a
+     * screen that reads the database once shows the recipe without its image and has no
+     * way to learn otherwise. Observing the table instead of snapshotting it removes that
+     * whole class of staleness rather than papering over this one instance of it.
+     */
+    fun observeAll(): Flow<List<Recipe>> =
+        queries.selectAllRecipes()
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows -> rows.map(::toRecipe) }
+
+    fun all(): List<Recipe> = queries.selectAllRecipes().executeAsList().map(::toRecipe)
+
+    private fun toRecipe(row: Recipe_): Recipe {
         val id = RecipeId(row.id)
-        Recipe(
+        return Recipe(
             id = id,
             title = row.title,
             source = Source(
@@ -43,6 +65,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
             ingredients = ingredientsFor(id),
             steps = stepsFor(id),
             notes = row.notes,
+            imagePath = row.image_path,
             language = row.language,
             extraction = Extraction(
                 tier = row.extraction_tier.toTier(),
@@ -68,6 +91,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 cook_minutes = recipe.timings.cookMinutes?.toLong(),
                 total_minutes = recipe.timings.totalMinutes?.toLong(),
                 notes = recipe.notes,
+                image_path = recipe.imagePath,
                 language = recipe.language,
                 extraction_tier = recipe.extraction.tier.name,
                 extraction_conf = recipe.extraction.confidence.toDouble(),
@@ -108,6 +132,10 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 )
             }
         }
+    }
+
+    fun setImagePath(id: RecipeId, path: String) {
+        queries.setImagePath(path, id.value)
     }
 
     fun ingredientsFor(id: RecipeId): List<IngredientLine> =

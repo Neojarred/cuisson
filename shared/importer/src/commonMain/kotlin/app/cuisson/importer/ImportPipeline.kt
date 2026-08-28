@@ -10,7 +10,7 @@ import app.cuisson.domain.DraftRecipe
  * URL never reaches one. When nothing can be read, the page text is kept rather than
  * discarded, so the user can salvage it.
  */
-class ImportPipeline(private val fetcher: RecipeFetcher) {
+class ImportPipeline(val fetcher: RecipeFetcher) {
 
     suspend fun importUrl(rawUrl: String): ImportOutcome =
         when (val fetched = fetcher.fetch(rawUrl)) {
