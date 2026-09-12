@@ -62,6 +62,22 @@ A generated image of a recipe, made for posting somewhere outside Cuisson. Uses 
 Image or no image at all, never a Source Image.
 _Avoid_: share image, export image
 
+**Note**:
+Something the user wrote about a Recipe themselves. Theirs, and never confused with what
+the publisher wrote.
+_Avoid_: comment, annotation
+
+**Source Note**:
+A note the publisher wrote alongside their recipe, such as which chilli to use or what to
+substitute. Kept as they wrote it and attributed to them. Stays on the device and is never
+included in anything sent to another person.
+_Avoid_: notes (ambiguous with the user's own), tips, description
+
+**Note Reference**:
+A pointer in an ingredient or a Step to a Source Note, as in "see Note 3". Resolved when
+that note was captured, and stated as missing when it was not.
+_Avoid_: footnote, link
+
 **Timeline**:
 The single ordered record of everything that has happened to a Recipe: when it was
 imported, each time it was changed, and each time it was cooked. Changes can be walked

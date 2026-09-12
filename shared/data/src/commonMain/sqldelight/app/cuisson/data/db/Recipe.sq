@@ -63,6 +63,17 @@ CREATE TABLE step (
 
 CREATE INDEX step_recipe ON step(recipe_id, position);
 
+-- The publisher's own notes, kept as they wrote them. Never shared. See ADR-0009.
+CREATE TABLE source_note (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    recipe_id           TEXT    NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    position            INTEGER NOT NULL,
+    label               TEXT,
+    text                TEXT    NOT NULL
+);
+
+CREATE INDEX source_note_recipe ON source_note(recipe_id, position);
+
 insertRecipe:
 INSERT OR REPLACE INTO recipe(
     id, title, title_raw, source_kind, source_url, source_name,
@@ -97,6 +108,13 @@ SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
+
+insertSourceNote:
+INSERT OR REPLACE INTO source_note(id, recipe_id, position, label, text)
+VALUES (?, ?, ?, ?, ?);
+
+selectNotesForRecipe:
+SELECT * FROM source_note WHERE recipe_id = ? ORDER BY position;
 
 selectSources:
 SELECT id, title, source_url FROM recipe WHERE source_url IS NOT NULL;

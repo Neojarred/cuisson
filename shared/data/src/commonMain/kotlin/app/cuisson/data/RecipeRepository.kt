@@ -16,6 +16,7 @@ import app.cuisson.domain.Recipe
 import app.cuisson.domain.RecipeId
 import app.cuisson.domain.Servings
 import app.cuisson.domain.Source
+import app.cuisson.domain.SourceNote
 import app.cuisson.domain.sourceUrlKey
 import app.cuisson.domain.SourceKind
 import app.cuisson.domain.Step
@@ -70,6 +71,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
             ingredients = ingredientsFor(id),
             steps = stepsFor(id),
             notes = row.notes,
+            sourceNotes = notesFor(id),
             imagePath = row.image_path,
             language = row.language,
             extraction = Extraction(
@@ -123,6 +125,15 @@ class RecipeRepository(private val database: CuissonDatabase) {
                     optional = if (line.optional) 1L else 0L,
                     canonical_item_id = line.canonicalItemId,
                     parse_confidence = line.parseConfidence.toDouble(),
+                )
+            }
+            recipe.sourceNotes.forEachIndexed { index, note ->
+                queries.insertSourceNote(
+                    id = "${recipe.id.value}-n$index",
+                    recipe_id = recipe.id.value,
+                    position = index.toLong(),
+                    label = note.label,
+                    text = note.text,
                 )
             }
             recipe.steps.forEach { step ->
@@ -182,6 +193,11 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 canonicalItemId = row.canonical_item_id,
                 parseConfidence = row.parse_confidence.toFloat(),
             )
+        }
+
+    fun notesFor(id: RecipeId): List<SourceNote> =
+        queries.selectNotesForRecipe(id.value).executeAsList().map {
+            SourceNote(label = it.label, text = it.text)
         }
 
     fun stepsFor(id: RecipeId): List<Step> =

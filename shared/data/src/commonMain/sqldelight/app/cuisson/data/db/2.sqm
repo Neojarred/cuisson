@@ -1,0 +1,14 @@
+-- Version 2 to version 3.
+--
+-- Adds the publisher's own notes, which a recipe's ingredients and steps point at.
+-- See ADR-0009 for why they are kept and why they never leave the device.
+
+CREATE TABLE source_note (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    recipe_id           TEXT    NOT NULL,
+    position            INTEGER NOT NULL,
+    label               TEXT,
+    text                TEXT    NOT NULL
+);
+
+CREATE INDEX source_note_recipe ON source_note(recipe_id, position);

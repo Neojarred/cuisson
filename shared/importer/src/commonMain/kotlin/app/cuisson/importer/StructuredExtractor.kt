@@ -42,7 +42,12 @@ object StructuredExtractor {
         val steps = readInstructions(recipe["recipeInstructions"], warnings)
         if (steps.isEmpty()) warnings += ExtractionWarning.NO_STEPS
 
-        if (steps.any { referencesUncapturedNotes(it.text) }) {
+        val sourceNotes = NotesExtractor.extract(html)
+
+        // The warning is about a reference we cannot satisfy. Once the notes are
+        // captured the recipe is whole, so saying otherwise would be noise.
+        val referencing = steps.map { it.text } + ingredientTexts
+        if (sourceNotes.isEmpty() && referencing.any { referencesNotes(it) }) {
             warnings += ExtractionWarning.REFERENCES_UNCAPTURED_NOTES
         }
 
@@ -66,6 +71,7 @@ object StructuredExtractor {
             totalMinutes = total ?: sumOrNull(prep, cook),
             ingredientLines = ingredients,
             steps = steps,
+            sourceNotes = sourceNotes,
             language = recipe["inLanguage"].firstString(),
             warnings = warnings,
         )
@@ -151,7 +157,7 @@ object StructuredExtractor {
      * outside the structured data. Dropping the target silently leaves a recipe that
      * looks complete and fails the cook halfway through.
      */
-    private fun referencesUncapturedNotes(text: String): Boolean =
+    private fun referencesNotes(text: String): Boolean =
         Regex("""\b(note\s*\d+|notes?\s+below|video\s+above|see\s+notes?)\b""", RegexOption.IGNORE_CASE)
             .containsMatchIn(text)
 

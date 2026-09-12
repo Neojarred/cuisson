@@ -91,6 +91,11 @@ class MigrationTest {
         assertEquals("Quiche lorraine maison", recipes.single().title)
         // The whole point of version 2.
         assertEquals(null, recipes.single().title_raw)
+        // And of version 3: the table exists and is queryable on a migrated database.
+        assertEquals(
+            0,
+            database.recipeQueries.selectNotesForRecipe("keep-me").executeAsList().size,
+        )
     }
 
     @Test
@@ -99,6 +104,6 @@ class MigrationTest {
         CuissonDatabase.Schema.create(driver)
         val database = CuissonDatabase(driver)
         assertEquals(0, database.recipeQueries.countRecipes().executeAsOne())
-        assertTrue(CuissonDatabase.Schema.version >= 2L)
+        assertTrue(CuissonDatabase.Schema.version >= 3L)
     }
 }

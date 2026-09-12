@@ -20,6 +20,7 @@ data class Recipe(
     val ingredients: List<IngredientLine>,
     val steps: List<Step>,
     val notes: String?,
+    val sourceNotes: List<SourceNote>,
     val imagePath: String?,
     val language: String,
     val extraction: Extraction,

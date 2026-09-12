@@ -24,6 +24,7 @@ data class DraftRecipe(
     val totalMinutes: Int? = null,
     val ingredientLines: List<DraftIngredient> = emptyList(),
     val steps: List<DraftStep> = emptyList(),
+    val sourceNotes: List<SourceNote> = emptyList(),
     val language: String? = null,
     val tier: ExtractionTier = ExtractionTier.STRUCTURED,
     val warnings: List<ExtractionWarning> = emptyList(),

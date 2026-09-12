@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -85,6 +86,33 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
 
             itemsIndexed(recipe.steps) { index, step ->
                 StepRow(index + 1, step)
+            }
+
+            if (recipe.sourceNotes.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(28.dp))
+                    SectionHeading("Notes from the source")
+                    Text(
+                        text = "Written by " + (recipe.source.name ?: "the author") +
+                            ", kept as they wrote it.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(recipe.sourceNotes) { note ->
+                    Row(modifier = Modifier.padding(vertical = 6.dp)) {
+                        note.label?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.width(36.dp),
+                            )
+                        }
+                        Text(note.text, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
 
             item { Spacer(Modifier.height(48.dp)) }
