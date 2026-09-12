@@ -36,8 +36,47 @@ internal object TitleTidy {
             }
         }
 
+        // "Recette de la tarte tatin" is a title about a recipe rather than a title.
+        for (prefix in LEADING_FILLER) {
+            if (title.length > prefix.length + 6 && title.startsWith(prefix, ignoreCase = true)) {
+                // Removing "La recette du " leaves a sentence starting in lower case.
+                title = title.drop(prefix.length).trim()
+                    .replaceFirstChar { it.uppercaseChar() }
+                break
+            }
+        }
+
+        title = shortenGarnishList(title)
+
         return title.ifBlank { raw.trim() }
     }
+
+    /**
+     * Cuts the garnishes off a restaurant's full menu description.
+     *
+     * Fine dining sites name a dish the way a menu does: "Fillet of beef wellington with
+     * parsley root puree mini fondants, sauteed kale and rosemary jus" is ninety-six
+     * characters, and in a list of forty recipes it is unreadable. The dish is the first
+     * clause; everything after "with" or the first comma is what comes alongside it.
+     *
+     * Only applied to titles long enough to be a problem, and never when it would leave a
+     * stub. Nothing is lost either way: the full title is kept and the recipe screen can
+     * show it. Trimming for a list is not the same as discarding.
+     */
+    private fun shortenGarnishList(title: String): String {
+        if (title.length <= LONG_TITLE) return title
+        val cut = GARNISH_JOINS
+            .mapNotNull { join -> title.indexOf(join, ignoreCase = true).takeIf { it > 0 } }
+            .filter { it >= SHORTEST_DISH }
+            .minOrNull() ?: return title
+        return title.substring(0, cut).trim().trimEnd(',')
+    }
+
+    /** Long enough that a list of them cannot be scanned. */
+    private const val LONG_TITLE = 60
+
+    /** Below this a cut leaves a stub rather than a dish. */
+    private const val SHORTEST_DISH = 12
 
     private fun isJunkTail(tail: String, sourceHost: String?): Boolean {
         if (tail.isEmpty() || tail.split(" ").size > 5) return false
@@ -50,6 +89,13 @@ internal object TitleTidy {
     }
 
     private val SEPARATORS = listOf(" : ", " - ", " — ", " – ")
+
+    private val GARNISH_JOINS = listOf(" with ", " avec ", ", ", " served ", " accompagne")
+
+    private val LEADING_FILLER = listOf(
+        "la recette du ", "la recette de la ", "la recette de ", "recette de la ",
+        "recette du ", "recette de ", "recipe for ", "how to make ",
+    )
 
     private val JUNK_TAILS = listOf(
         "la meilleure recette", "meilleure recette", "notre recette", "recette facile",

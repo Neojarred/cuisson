@@ -59,6 +59,42 @@ class TitleTidyTest {
     }
 
     @Test
+    fun `cuts the garnishes off a menu description`() {
+        assertEquals(
+            "Fillet of beef wellington",
+            TitleTidy.tidy(
+                "Fillet of beef wellington with parsley root puree mini fondants, " +
+                    "sauteed kale and rosemary jus",
+            ),
+        )
+        assertEquals(
+            "Granola express au airfryer",
+            TitleTidy.tidy("Granola express au airfryer, pour faire croustiller ton petit-dejeuner"),
+        )
+    }
+
+    @Test
+    fun `leaves a short title with a with in it alone`() {
+        // Under the length where a list becomes unreadable, so the garnish stays.
+        assertEquals(
+            "Parmigiano Reggiano Chicken Parmesan with Mozzarella",
+            TitleTidy.tidy("Parmigiano Reggiano Chicken Parmesan with Mozzarella"),
+        )
+        assertEquals(
+            "Chopped Salad With Sardines and Preserved Lemon",
+            TitleTidy.tidy("Chopped Salad With Sardines and Preserved Lemon"),
+        )
+    }
+
+    @Test
+    fun `drops a leading filler and keeps the capital`() {
+        assertEquals(
+            "Fondant au chocolat 5 ingredients sans beurre",
+            TitleTidy.tidy("La recette du fondant au chocolat 5 ingredients sans beurre"),
+        )
+    }
+
+    @Test
     fun `never returns nothing`() {
         assertEquals("Recipe", TitleTidy.tidy("Recipe"))
         assertEquals("la meilleure recette", TitleTidy.tidy("la meilleure recette"))
