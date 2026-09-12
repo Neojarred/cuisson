@@ -17,6 +17,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openId = intent?.getStringExtra(EXTRA_OPEN_RECIPE)?.let(::RecipeId)
         val recipes = Cuisson.repository(this).observeAll()
 
         setContent {
@@ -38,5 +39,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(EXTRA_OPEN_RECIPE)?.let { openId = RecipeId(it) }
+    }
+
+    companion object {
+        /** Set when arriving from the import screen to show a recipe already saved. */
+        const val EXTRA_OPEN_RECIPE = "openRecipe"
     }
 }

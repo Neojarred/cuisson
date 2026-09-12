@@ -1,0 +1,13 @@
+-- Version 1 to version 2.
+--
+-- Adds the column holding a recipe's title as the source wrote it, before the
+-- search-engine tail is trimmed off it. See ADR-0004 and ADR-0008.
+--
+-- image_path is deliberately absent from this migration even though it arrived at the
+-- same time as this file. It was added to the schema with no migration at all, and the
+-- only database in existence had been wiped for unrelated reasons before that mattered,
+-- so every real database already has the column. Adding it here would fail on a
+-- duplicate column name. This comment exists because that is not obvious and because
+-- getting away with it once is not a reason to repeat it.
+
+ALTER TABLE recipe ADD COLUMN title_raw TEXT;

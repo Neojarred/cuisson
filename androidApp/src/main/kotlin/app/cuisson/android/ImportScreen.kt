@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import app.cuisson.domain.DraftRecipe
 import app.cuisson.domain.ExtractionTier
 import app.cuisson.domain.ExtractionWarning
+import app.cuisson.domain.RecipeId
 
 @Composable
 fun ImportScreen(
@@ -39,6 +40,8 @@ fun ImportScreen(
     onCancel: () -> Unit,
     onOpenSettings: () -> Unit = {},
     onTypeInstead: () -> Unit = {},
+    onOpenSaved: (RecipeId) -> Unit = {},
+    onImportAnyway: (ImportState.AlreadyHave) -> Unit = {},
     onTypedChanged: (String, String) -> Unit = { _, _ -> },
     onParseTyped: (String, String) -> Unit = { _, _ -> },
 ) {
@@ -70,6 +73,12 @@ fun ImportScreen(
                     "off without you noticing.",
                 onCancel = onCancel,
                 action = "Open settings" to onOpenSettings,
+            )
+            is ImportState.AlreadyHave -> AlreadyHave(
+                state = state,
+                onOpen = { onOpenSaved(state.existing.id) },
+                onImportAnyway = { onImportAnyway(state) },
+                onCancel = onCancel,
             )
             is ImportState.Broke -> Message(
                 heading = "That did not work",
@@ -207,6 +216,45 @@ private fun Message(
 }
 
 /**
+ * Offered when this address has been imported before.
+ *
+ * The recipe already saved comes first, because importing the same page twice is nearly
+ * always a slip. Saving a second copy is still one tap away, since publishers do change
+ * their recipes and two versions of one page can both be worth keeping.
+ */
+@Composable
+private fun AlreadyHave(
+    state: ImportState.AlreadyHave,
+    onOpen: () -> Unit,
+    onImportAnyway: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(modifier = Modifier.padding(20.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Text("You already have this", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = state.existing.title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Saved from the same address.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(20.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onOpen) { Text("Open it") }
+            TextButton(onClick = onImportAnyway) { Text("Save a second copy") }
+        }
+        Spacer(Modifier.height(4.dp))
+        TextButton(onClick = onCancel, contentPadding = PaddingValues(0.dp)) { Text("Cancel") }
+    }
+}
+
+/**
  * The Review. Always shown, and dismissible in one tap when the extraction was clean.
  *
  * What it must never do is present an uncertain result as a finished one, so anything the
@@ -219,6 +267,8 @@ private fun Review(
     onCancel: () -> Unit,
     onOpenSettings: () -> Unit = {},
     onTypeInstead: () -> Unit = {},
+    onOpenSaved: (RecipeId) -> Unit = {},
+    onImportAnyway: (ImportState.AlreadyHave) -> Unit = {},
     onTypedChanged: (String, String) -> Unit = { _, _ -> },
     onParseTyped: (String, String) -> Unit = { _, _ -> },
 ) {

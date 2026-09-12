@@ -98,5 +98,8 @@ SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
 
+selectSources:
+SELECT id, title, source_url FROM recipe WHERE source_url IS NOT NULL;
+
 countRecipes:
 SELECT count(*) FROM recipe;

@@ -25,6 +25,12 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+        jvmMain.dependencies {
+            // Lets the schema and its migrations run against a real SQLite database off
+            // the device, which is the only way to know a migration works before it
+            // touches someone's phone. No JVM build of Cuisson ships.
+            implementation(libs.sqldelight.sqlite.driver)
+        }
     }
 }
 

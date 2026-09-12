@@ -16,11 +16,15 @@ import app.cuisson.domain.Recipe
 import app.cuisson.domain.RecipeId
 import app.cuisson.domain.Servings
 import app.cuisson.domain.Source
+import app.cuisson.domain.sourceUrlKey
 import app.cuisson.domain.SourceKind
 import app.cuisson.domain.Step
 import app.cuisson.domain.Timings
 import app.cuisson.domain.UnitSystem
 import kotlin.time.Instant
+
+/** Just enough of an already-saved recipe to offer it instead of a duplicate. */
+data class SavedSource(val id: RecipeId, val title: String)
 
 private const val REF_SEPARATOR = "\n"
 
@@ -134,6 +138,19 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 )
             }
         }
+    }
+
+    /**
+     * The recipe already saved from this address, if there is one.
+     *
+     * Addresses are compared by their identifying part rather than as written, because
+     * the same page arrives with and without tracking parameters. See [sourceUrlKey].
+     */
+    fun findBySourceUrl(url: String?): SavedSource? {
+        val key = sourceUrlKey(url) ?: return null
+        return queries.selectSources().executeAsList()
+            .firstOrNull { sourceUrlKey(it.source_url) == key }
+            ?.let { SavedSource(RecipeId(it.id), it.title) }
     }
 
     fun setImagePath(id: RecipeId, path: String) {

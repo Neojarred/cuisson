@@ -12,7 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
+import app.cuisson.data.SavedSource
 import app.cuisson.domain.DraftRecipe
+import app.cuisson.domain.RecipeId
 import app.cuisson.domain.toRecipe
 import app.cuisson.importer.ImportOutcome
 import kotlinx.coroutines.launch
@@ -48,6 +50,8 @@ class ImportActivity : ComponentActivity() {
                     onSave = ::save,
                     onCancel = { imageStore.clearStaging(); finish() },
                     onOpenSettings = ::openAppSettings,
+                    onOpenSaved = ::openSaved,
+                    onImportAnyway = ::importAnyway,
                 )
             }
         }
@@ -124,8 +128,31 @@ class ImportActivity : ComponentActivity() {
             is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
             else -> return ImportState.Broke("That could not be read as a recipe.")
         }
+        // The same page imported twice is almost always a mistake rather than an
+        // intention, so the recipe already saved from that address is offered first.
+        // Saving a second copy stays available, because sites do edit their recipes.
+        Cuisson.repository(this).findBySourceUrl(review.draft.sourceUrl)?.let { existing ->
+            return ImportState.AlreadyHave(existing, review.draft, review.clean)
+        }
+
         fetchImageForReview(review.draft.imageUrl)
         return review
+    }
+
+    private fun openSaved(id: RecipeId) {
+        imageStore.clearStaging()
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .putExtra(MainActivity.EXTRA_OPEN_RECIPE, id.value)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        )
+        finish()
+    }
+
+    private fun importAnyway(state: ImportState.AlreadyHave) {
+        val review = ImportState.Reviewing(state.draft, state.clean)
+        fetchImageForReview(state.draft.imageUrl)
+        this.state = review
     }
 
     /**
@@ -223,4 +250,11 @@ sealed interface ImportState {
 
     /** Only reachable where INTERNET is revocable, which in practice means GrapheneOS. */
     data object NoNetworkPermission : ImportState
+
+    /** This address has already been saved once. */
+    data class AlreadyHave(
+        val existing: SavedSource,
+        val draft: DraftRecipe,
+        val clean: Boolean,
+    ) : ImportState
 }
