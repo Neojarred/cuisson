@@ -14,9 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.cuisson.data.CookRecord
 import app.cuisson.domain.Cookbook
 import app.cuisson.domain.RecipeId
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +41,11 @@ class MainActivity : ComponentActivity() {
         val recipes = repository.observeAll()
         val cookbooks = repository.observeCookbooks()
 
-        Cuisson.background.launch { repository.backfillSearchIfEmpty() }
+        Cuisson.background.launch {
+            repository.backfillSearchIfEmpty()
+            // The duration reading changed, so every step is read again once.
+            repository.backfillStepDurations(all = true)
+        }
 
         setContent {
             CuissonTheme {
@@ -58,8 +64,13 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when {
-                    open != null -> RecipeScreen(
+                    open != null -> {
+                        val record by remember(open.id) { repository.observeCookRecord(open.id) }
+                            .collectAsStateWithLifecycle(CookRecord(0, null))
+                        RecipeScreen(
                         recipe = open,
+                        cookCount = record.count,
+                        lastCooked = record.lastCooked,
                         cookbooks = shelf,
                         onFile = { cookbook ->
                             Cuisson.background.launch {
@@ -74,7 +85,8 @@ class MainActivity : ComponentActivity() {
                         },
                         onCook = { CookModeActivity.start(this@MainActivity, open.id) },
                         onBack = { openId = null },
-                    )
+                        )
+                    }
 
                     openCookbook != null -> {
                         val cookbook = openCookbook!!

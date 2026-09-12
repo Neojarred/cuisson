@@ -47,6 +47,8 @@ fun RecipeScreen(
     recipe: Recipe,
     onBack: () -> Unit,
     cookbooks: List<Cookbook> = emptyList(),
+    cookCount: Int = 0,
+    lastCooked: Long? = null,
     onFile: (Cookbook) -> Unit = {},
     onCook: () -> Unit = {},
 ) {
@@ -93,6 +95,14 @@ fun RecipeScreen(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (cookCount > 0) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = cookingRecord(cookCount, lastCooked),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Spacer(Modifier.height(30.dp))
                 SectionHeading("Ingredients")
             }
@@ -280,6 +290,26 @@ private fun StepRow(number: Int, step: Step, captured: Set<String>) {
             }
         }
     }
+}
+
+/**
+ * What the Cook Entries add up to. A recipe you have made four times is a different thing
+ * from one you saved and never cooked, and that is worth saying on the recipe itself.
+ */
+private fun cookingRecord(count: Int, lastCooked: Long?): String {
+    val times = if (count == 1) "Cooked once" else "Cooked $count times"
+    val last = lastCooked?.let {
+        val date = java.time.Instant.ofEpochMilli(it)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+        val today = java.time.LocalDate.now()
+        when {
+            date == today -> "today"
+            date == today.minusDays(1) -> "yesterday"
+            else -> date.format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy"))
+        }
+    }
+    return listOfNotNull(times, last?.let { "last $it" }).joinToString(" · ").uppercase()
 }
 
 private fun subtitleFor(recipe: Recipe): String {

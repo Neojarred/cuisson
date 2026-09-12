@@ -109,6 +109,15 @@ SELECT * FROM recipe WHERE id = ?;
 selectIngredientsForRecipe:
 SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 
+setStepDuration:
+UPDATE step SET duration_seconds = ? WHERE id = ?;
+
+selectAllSteps:
+SELECT id, text FROM step;
+
+stepsWithoutDuration:
+SELECT id, text FROM step WHERE duration_seconds IS NULL;
+
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
 

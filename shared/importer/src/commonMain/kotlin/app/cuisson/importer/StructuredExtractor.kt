@@ -3,6 +3,7 @@ package app.cuisson.importer
 import app.cuisson.domain.DraftRecipe
 import app.cuisson.domain.DraftStep
 import app.cuisson.domain.ExtractionWarning
+import app.cuisson.text.durationInStep
 import com.fleeksoft.ksoup.Ksoup
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement

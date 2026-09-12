@@ -1,4 +1,4 @@
-package app.cuisson.importer
+package app.cuisson.text
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,6 +11,22 @@ class StepDurationTest {
         assertEquals(35 * 60, durationInStep("Simmer gently for 35 minutes, stirring now and then."))
         assertEquals(75 * 60, durationInStep("Put the lid on and leave it to simmer for 75 minutes."))
         assertEquals(2 * 3600, durationInStep("Cook on low for 2 hours."))
+    }
+
+    @Test
+    fun `an hour and some minutes is one duration`() {
+        // "1 hr 15 minutes" was being read as an hour, so the timer was fifteen minutes
+        // short of the recipe.
+        assertEquals(75 * 60, durationInStep("Put the lid on and leave it to simmer for 1 hr 15 minutes."))
+        assertEquals(90 * 60, durationInStep("Leave it to prove for 1 hour 30 minutes."))
+    }
+
+    @Test
+    fun `a following sentence is not part of the wait`() {
+        assertEquals(
+            20 * 60,
+            durationInStep("Simmer for 20 minutes. Rest for 5 minutes before serving."),
+        )
     }
 
     @Test

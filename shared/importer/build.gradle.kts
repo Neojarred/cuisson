@@ -15,6 +15,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":shared:domain"))
+            implementation(project(":shared:text"))
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ksoup)
             implementation(libs.ktor.client.core)

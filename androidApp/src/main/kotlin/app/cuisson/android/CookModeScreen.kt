@@ -218,7 +218,11 @@ private fun Timer(seconds: Int) {
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = "%d:%02d".format(remaining / 60, remaining % 60),
+            text = if (remaining >= 3600) {
+                "%d:%02d:%02d".format(remaining / 3600, (remaining % 3600) / 60, remaining % 60)
+            } else {
+                "%d:%02d".format(remaining / 60, remaining % 60)
+            },
             style = MaterialTheme.typography.displaySmall,
             color = if (remaining == 0) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurface,

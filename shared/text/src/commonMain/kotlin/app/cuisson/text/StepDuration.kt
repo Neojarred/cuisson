@@ -1,4 +1,4 @@
-package app.cuisson.importer
+package app.cuisson.text
 
 /**
  * Finds the cooking time a step tells you to wait.
@@ -11,18 +11,37 @@ package app.cuisson.importer
  * of number, and offering a timer for the wrong one is worse than offering none: someone
  * sets it, walks away, and comes back to a burnt pan.
  */
-internal fun durationInStep(text: String): Int? {
+fun durationInStep(text: String): Int? {
     val match = WAITING.find(text) ?: return null
-    val amount = match.groupValues[1].toIntOrNull() ?: return null
-    // "30 - 40 minutes" means check at thirty, so the first number is the one to set.
-    val unit = match.groupValues[2].lowercase()
-    val seconds = when {
-        unit.startsWith("h") -> amount * 3600
-        unit.startsWith("s") -> amount
-        else -> amount * 60
+    var seconds = secondsOf(match.groupValues[1], match.groupValues[2]) ?: return null
+
+    // "1 hr 15 minutes" is one duration, not an hour followed by a coincidence. A second
+    // amount straight after the first, in a smaller unit, belongs to the same wait.
+    val rest = text.substring(match.range.last + 1)
+    CONTINUATION.find(rest)?.let { more ->
+        if (more.range.first <= 2) {
+            secondsOf(more.groupValues[1], more.groupValues[2])
+                ?.takeIf { it < seconds }
+                ?.let { seconds += it }
+        }
     }
+
     return seconds.takeIf { it in 30..(12 * 3600) }
 }
+
+private fun secondsOf(amount: String, unit: String): Int? {
+    val value = amount.toIntOrNull() ?: return null
+    return when {
+        unit.lowercase().startsWith("h") -> value * 3600
+        unit.lowercase().startsWith("s") -> value
+        else -> value * 60
+    }
+}
+
+private val CONTINUATION = Regex(
+    "^\\s*(\\d{1,3})\\s*(hours?|hrs?|h|minutes?|mins?|min|seconds?|secs?)\\b",
+    RegexOption.IGNORE_CASE,
+)
 
 /**
  * A word about waiting, then a number, then a unit of time. The number may be a range,

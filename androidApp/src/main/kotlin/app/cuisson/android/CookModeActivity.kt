@@ -3,6 +3,7 @@ package app.cuisson.android
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
@@ -40,6 +41,13 @@ class CookModeActivity : ComponentActivity() {
                                     System.currentTimeMillis(),
                                     UUID.randomUUID().toString(),
                                 )
+                                // Something has to acknowledge it, or the tap reads as
+                                // nothing more than a way out of the screen.
+                                Toast.makeText(
+                                    this,
+                                    "Added to your cooking record",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             }
                             finish()
                         },

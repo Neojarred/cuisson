@@ -23,8 +23,14 @@ import app.cuisson.domain.sourceUrlKey
 import app.cuisson.domain.SourceKind
 import app.cuisson.domain.Step
 import app.cuisson.domain.Timings
+import app.cuisson.text.durationInStep
 import app.cuisson.domain.UnitSystem
 import kotlin.time.Instant
+
+internal data class StepText(val id: String, val text: String)
+
+/** How many times a recipe has been cooked, and when it last was. */
+data class CookRecord(val count: Int, val lastCooked: Long?)
 
 /** Just enough of an already-saved recipe to offer it instead of a duplicate. */
 data class SavedSource(val id: RecipeId, val title: String)
@@ -277,9 +283,47 @@ class RecipeRepository(private val database: CuissonDatabase) {
     fun fileRecipe(id: RecipeId, chapterId: String, now: Long) =
         queries.fileRecipe(chapterId, now, id.value)
 
+    /**
+     * Reads timers into steps saved before timers existed.
+     *
+     * Durations are parsed at import, so every recipe imported before that went to Cook
+     * Mode with no timers at all. Re-importing a library to gain a feature is not a
+     * reasonable thing to ask of anyone.
+     */
+    fun backfillStepDurations(all: Boolean = false) {
+        runCatching {
+            val pending = if (all) {
+                queries.selectAllSteps().executeAsList().map { it.id to it.text }
+                    .map { (id, text) -> StepText(id, text) }
+            } else {
+                queries.stepsWithoutDuration().executeAsList()
+                    .map { StepText(it.id, it.text) }
+            }
+            if (pending.isEmpty()) return
+            database.transaction {
+                pending.forEach { step ->
+                    queries.setStepDuration(durationInStep(step.text)?.toLong(), step.id)
+                }
+            }
+        }
+    }
+
     /** Written with one tap at the end of Cook Mode. */
     fun logCook(id: RecipeId, at: Long, entryId: String) =
         queries.insertCookEntry(entryId, id.value, at, null, null)
+
+    /**
+     * The cooking record, kept current.
+     *
+     * Reading it once was not enough: logging a cook writes to cook_entry and the library
+     * observes recipe, so nothing recomposed and the recipe went on claiming it had never
+     * been cooked.
+     */
+    fun observeCookRecord(id: RecipeId): Flow<CookRecord> =
+        queries.cookEntriesFor(id.value)
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { entries -> CookRecord(entries.size, entries.firstOrNull()?.cooked_at) }
 
     fun cookCount(id: RecipeId): Int =
         queries.cookEntriesFor(id.value).executeAsList().size
