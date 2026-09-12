@@ -13,6 +13,8 @@ package app.cuisson.domain
  */
 data class DraftRecipe(
     val title: String,
+    /** The title exactly as the source wrote it, before any tidying. See ADR-0004. */
+    val rawTitle: String? = null,
     val sourceUrl: String? = null,
     val sourceName: String? = null,
     val imageUrl: String? = null,

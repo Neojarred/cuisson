@@ -83,5 +83,58 @@ internal fun JsonElement?.allStrings(): List<String> = when (this) {
 }
 
 /** A JSON null arrives as the unquoted literal `null`, which is not a usable string. */
+/**
+ * Picks the image worth keeping out of the several a publisher lists.
+ *
+ * Google asks for the same photo in more than one aspect ratio and recommends 1x1 first,
+ * so taking the first item reliably gets the square crop. On a recipe screen that reads
+ * as a zoomed-in version of the real photo, which is what it is.
+ *
+ * Explicit dimensions are used where they exist, either on an ImageObject or written into
+ * the URL, which most image pipelines do. Where nothing says how big anything is, the
+ * first one stands, because guessing would be worse than the publisher's own order.
+ */
+internal fun JsonElement?.bestImageUrl(): String? {
+    val candidates = when (this) {
+        null -> return null
+        is JsonArray -> toList()
+        else -> listOf(this)
+    }
+
+    val measured = candidates.mapNotNull { candidate ->
+        val url = candidate.firstString() ?: return@mapNotNull null
+        val declared = (candidate as? JsonObject)?.let { obj ->
+            val width = obj["width"].firstString()?.filter { it.isDigit() }?.toIntOrNull()
+            val height = obj["height"].firstString()?.filter { it.isDigit() }?.toIntOrNull()
+            if (width != null) width to (height ?: width) else null
+        }
+        val size = declared ?: dimensionsInUrl(url)
+        url to size
+    }
+
+    if (measured.isEmpty()) return null
+
+    val best = measured
+        .filter { it.second != null }
+        .maxByOrNull { (_, size) ->
+            val (width, height) = size!!
+            // Area first, then favour the wider crop of two the same size.
+            width.toLong() * height + if (width > height) 1 else 0
+        }
+    return best?.first ?: measured.first().first
+}
+
+/** "photo-1200x800.jpg", "/w_1200,h_800/", "?width=1200&height=800". */
+private fun dimensionsInUrl(url: String): Pair<Int, Int>? {
+    Regex("""(\d{2,5})\s*[xX×]\s*(\d{2,5})""").find(url)?.let {
+        return it.groupValues[1].toInt() to it.groupValues[2].toInt()
+    }
+    val width = Regex("""[?&_/](?:w|width)[=_]?(\d{2,5})""").find(url)
+        ?.groupValues?.get(1)?.toIntOrNull() ?: return null
+    val height = Regex("""[?&_/](?:h|height)[=_]?(\d{2,5})""").find(url)
+        ?.groupValues?.get(1)?.toIntOrNull()
+    return width to (height ?: width)
+}
+
 private fun JsonPrimitive.contentOrNullSafe(): String? =
     if (!isString && content == "null") null else content

@@ -12,15 +12,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.remember
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
@@ -55,7 +48,10 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
                     Text("Back")
                 }
                 Spacer(Modifier.height(4.dp))
-                recipe.imagePath?.let { LocalImage(it) }
+                recipe.imagePath?.let {
+                    LocalImage(it)
+                    Spacer(Modifier.height(12.dp))
+                }
                 Text(recipe.title, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -83,28 +79,6 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
             item { Spacer(Modifier.height(48.dp)) }
         }
     }
-}
-
-/**
- * Recipe images are files on this device, never addresses on someone else's server, so
- * decoding one needs no image loading library and no network. That is a consequence of
- * ADR-0007 rather than a shortcut.
- */
-@Composable
-private fun LocalImage(path: String) {
-    val bitmap = remember(path) {
-        runCatching { BitmapFactory.decodeFile(path)?.asImageBitmap() }.getOrNull()
-    } ?: return
-    Image(
-        bitmap = bitmap,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .clip(RoundedCornerShape(12.dp)),
-    )
-    Spacer(Modifier.height(12.dp))
 }
 
 @Composable

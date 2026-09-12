@@ -4,6 +4,8 @@
 CREATE TABLE recipe (
     id                  TEXT    NOT NULL PRIMARY KEY,
     title               TEXT    NOT NULL,
+    -- The title as the source wrote it, kept so a bad tidy is reversible. ADR-0004.
+    title_raw           TEXT,
     source_kind         TEXT    NOT NULL,
     source_url          TEXT,
     source_name         TEXT,
@@ -63,11 +65,11 @@ CREATE INDEX step_recipe ON step(recipe_id, position);
 
 insertRecipe:
 INSERT OR REPLACE INTO recipe(
-    id, title, source_kind, source_url, source_name,
+    id, title, title_raw, source_kind, source_url, source_name,
     servings_count, servings_unit, prep_minutes, cook_minutes, total_minutes,
     notes, image_path, language, extraction_tier, extraction_conf, needs_review,
     created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 setImagePath:
 UPDATE recipe SET image_path = ? WHERE id = ?;

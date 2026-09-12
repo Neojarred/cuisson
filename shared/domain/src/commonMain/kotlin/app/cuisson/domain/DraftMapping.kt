@@ -16,6 +16,7 @@ import kotlin.time.Instant
 fun DraftRecipe.toRecipe(id: String, now: Instant): Recipe = Recipe(
     id = RecipeId(id),
     title = title.ifBlank { "Untitled recipe" },
+    rawTitle = rawTitle?.takeIf { it != title },
     source = Source(
         kind = if (sourceUrl != null) SourceKind.WEB else SourceKind.PASTED_TEXT,
         url = sourceUrl,

@@ -30,6 +30,7 @@ import kotlin.time.Clock
 class ImportActivity : ComponentActivity() {
 
     private var state by mutableStateOf<ImportState>(ImportState.AskingForUrl(""))
+    private val imageStore by lazy { ImageStore(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +46,7 @@ class ImportActivity : ComponentActivity() {
                     onTypedChanged = { t, b -> state = ImportState.TypingText(t, b) },
                     onParseTyped = ::parseTyped,
                     onSave = ::save,
-                    onCancel = { finish() },
+                    onCancel = { imageStore.clearStaging(); finish() },
                     onOpenSettings = ::openAppSettings,
                 )
             }
@@ -97,9 +98,11 @@ class ImportActivity : ComponentActivity() {
         lifecycleScope.launch {
             val outcome = Cuisson.importPipeline.importUrl(input)
             Log.i(IMPORT_LOG, describeForLog(input, outcome))
+            // Every outcome that produces a Review goes through reviewOf, which is
+            // what starts the image download. An earlier version built two of these
+            // states inline and silently skipped it.
             state = when (outcome) {
-                is ImportOutcome.Ready -> ImportState.Reviewing(outcome.draft, clean = true)
-                is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
+                is ImportOutcome.Ready, is ImportOutcome.NeedsWork -> reviewOf(outcome)
                 is ImportOutcome.Blocked -> ImportState.Refused(outcome.status, outcome.url)
                 is ImportOutcome.Failed ->
                     if (failedBeforeReachingAnyServer(outcome.describe)) {
@@ -115,10 +118,31 @@ class ImportActivity : ComponentActivity() {
         }
     }
 
-    private fun reviewOf(outcome: ImportOutcome): ImportState = when (outcome) {
-        is ImportOutcome.Ready -> ImportState.Reviewing(outcome.draft, clean = true)
-        is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
-        else -> ImportState.Broke("That could not be read as a recipe.")
+    private fun reviewOf(outcome: ImportOutcome): ImportState {
+        val review = when (outcome) {
+            is ImportOutcome.Ready -> ImportState.Reviewing(outcome.draft, clean = true)
+            is ImportOutcome.NeedsWork -> ImportState.Reviewing(outcome.draft, clean = false)
+            else -> return ImportState.Broke("That could not be read as a recipe.")
+        }
+        fetchImageForReview(review.draft.imageUrl)
+        return review
+    }
+
+    /**
+     * Downloads the picture while the user is reading the Review.
+     *
+     * An import that lands with no photograph reads as one that failed, even when every
+     * ingredient is right. So the image arrives before the decision rather than after it.
+     * It goes to a staging file and is promoted only if the recipe is saved.
+     */
+    private fun fetchImageForReview(url: String?) {
+        imageStore.clearStaging()
+        if (url == null) return
+        lifecycleScope.launch {
+            val bytes = Cuisson.importPipeline.fetcher.fetchBytes(url) ?: return@launch
+            val path = imageStore.writeStaging(bytes)
+            (state as? ImportState.Reviewing)?.let { state = it.copy(imagePath = path) }
+        }
     }
 
     fun parseTyped(title: String, body: String) {
@@ -143,23 +167,29 @@ class ImportActivity : ComponentActivity() {
     }
 
     private fun save(draft: DraftRecipe) {
-        val recipe = draft.toRecipe(UUID.randomUUID().toString(), Clock.System.now())
+        val id = UUID.randomUUID().toString()
+        val recipe = draft.toRecipe(id, Clock.System.now())
         val repository = Cuisson.repository(this)
         repository.save(recipe)
-        Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
 
-        // The picture is fetched after saving rather than before it, so a slow or
-        // missing image never costs the user the recipe. It runs on the application's
-        // scope because this screen is about to close, and a download tied to it would
-        // be cancelled before it began.
-        draft.imageUrl?.let { url ->
-            val store = ImageStore(applicationContext)
-            Cuisson.background.launch {
-                Cuisson.importPipeline.fetcher.fetchBytes(url)?.let { bytes ->
-                    repository.setImagePath(recipe.id, store.write(recipe.id.value, bytes))
+        // The picture was already downloaded for the Review, so saving is a rename.
+        imageStore.promoteStaging(id)?.let { repository.setImagePath(recipe.id, it) }
+
+        // Unless the download had not finished yet, in which case it continues on the
+        // application scope. This screen is closing and would cancel anything tied to it.
+        if (imageStore.pathFor(id) == null) {
+            val url = draft.imageUrl
+            val store = imageStore
+            if (url != null) {
+                Cuisson.background.launch {
+                    val bytes = Cuisson.importPipeline.fetcher.fetchBytes(url)
+                    if (bytes != null) {
+                        repository.setImagePath(recipe.id, store.write(id, bytes))
+                    }
                 }
             }
         }
+        Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
         finish()
     }
 
@@ -181,7 +211,11 @@ sealed interface ImportState {
     /** Typing or pasting the recipe itself, when there is no page to fetch. */
     data class TypingText(val title: String, val body: String) : ImportState
     data class Working(val url: String) : ImportState
-    data class Reviewing(val draft: DraftRecipe, val clean: Boolean) : ImportState
+    data class Reviewing(
+        val draft: DraftRecipe,
+        val clean: Boolean,
+        val imagePath: String? = null,
+    ) : ImportState
 
     /** The site refused us. Distinct from a failure because the advice differs. */
     data class Refused(val status: Int, val url: String) : ImportState

@@ -25,7 +25,8 @@ object StructuredExtractor {
         val recipe = findRecipeNode(html) ?: return null
         val warnings = mutableListOf<ExtractionWarning>()
 
-        val title = recipe["name"].firstString()?.let(::cleanText).orEmpty()
+        val rawTitle = recipe["name"].firstString()?.let(::cleanText).orEmpty()
+        val title = TitleTidy.tidy(rawTitle, hostOf(sourceUrl))
         if (title.isBlank()) warnings += ExtractionWarning.NO_TITLE
 
         val ingredients = (recipe["recipeIngredient"] ?: recipe["ingredients"])
@@ -51,9 +52,10 @@ object StructuredExtractor {
 
         return DraftRecipe(
             title = title,
+            rawTitle = rawTitle,
             sourceUrl = sourceUrl,
             sourceName = recipe["author"].firstString()?.let(::cleanText),
-            imageUrl = recipe["image"].firstString(),
+            imageUrl = recipe["image"].bestImageUrl(),
             servingsText = servings,
             prepMinutes = prep,
             cookMinutes = cook,
@@ -148,6 +150,9 @@ object StructuredExtractor {
     private fun referencesUncapturedNotes(text: String): Boolean =
         Regex("""\b(note\s*\d+|notes?\s+below|video\s+above|see\s+notes?)\b""", RegexOption.IGNORE_CASE)
             .containsMatchIn(text)
+
+    private fun hostOf(url: String?): String? =
+        url?.let { Regex("""https?://([^/]+)""").find(it)?.groupValues?.get(1) }
 
     private fun containsMarkup(text: String): Boolean =
         text.contains('<') && Regex("<[a-zA-Z/][^>]*>").containsMatchIn(text)

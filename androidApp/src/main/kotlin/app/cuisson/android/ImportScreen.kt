@@ -227,6 +227,10 @@ private fun Review(
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 20.dp)) {
             item {
                 Spacer(Modifier.height(16.dp))
+                state.imagePath?.let {
+                    LocalImage(it, height = 160)
+                    Spacer(Modifier.height(12.dp))
+                }
                 Text(
                     text = draft.title.ifBlank { "Untitled recipe" },
                     style = MaterialTheme.typography.headlineSmall,
@@ -329,7 +333,8 @@ private fun explain(warning: ExtractionWarning): String? = when (warning) {
 
 private fun describe(draft: DraftRecipe): String {
     val parts = mutableListOf<String>()
-    draft.servingsText?.let { parts += it }
+    // "8 personnes" says what it is. A bare "4" does not, so it gets a noun.
+    draft.servingsText?.let { parts += if (it.all(Char::isDigit)) "$it servings" else it }
     draft.totalMinutes?.let { parts += "$it min" }
     parts += "${draft.ingredientLines.size} ingredients"
     parts += when (draft.tier) {

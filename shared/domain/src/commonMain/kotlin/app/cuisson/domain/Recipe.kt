@@ -13,6 +13,7 @@ import kotlin.jvm.JvmInline
 data class Recipe(
     val id: RecipeId,
     val title: String,
+    val rawTitle: String?,
     val source: Source,
     val servings: Servings?,
     val timings: Timings,

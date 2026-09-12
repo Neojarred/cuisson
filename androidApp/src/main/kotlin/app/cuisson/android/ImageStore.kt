@@ -23,6 +23,33 @@ class ImageStore(context: Context) {
         return file.absolutePath
     }
 
+    /**
+     * Holds a picture belonging to a recipe nobody has accepted yet.
+     *
+     * The Review downloads the image before the user decides, because an import that
+     * shows no picture reads as one that went wrong even when every ingredient is
+     * correct. Accepting the recipe promotes the file; discarding deletes it.
+     */
+    fun writeStaging(bytes: ByteArray): String = write(STAGING, bytes)
+
+    fun promoteStaging(recipeId: String): String? {
+        val staged = File(directory, "$STAGING.img")
+        if (!staged.exists()) return null
+        val destination = File(directory, "$recipeId.img")
+        return if (staged.renameTo(destination)) destination.absolutePath else null
+    }
+
+    fun clearStaging() {
+        File(directory, "$STAGING.img").delete()
+    }
+
+    private companion object {
+        const val STAGING = "staging"
+    }
+
+    fun pathFor(recipeId: String): String? =
+        File(directory, "$recipeId.img").takeIf { it.exists() }?.absolutePath
+
     fun delete(recipeId: String) {
         File(directory, "$recipeId.img").delete()
     }

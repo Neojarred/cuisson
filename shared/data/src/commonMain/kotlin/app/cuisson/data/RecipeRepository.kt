@@ -51,6 +51,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
         return Recipe(
             id = id,
             title = row.title,
+            rawTitle = row.title_raw,
             source = Source(
                 kind = row.source_kind.toSourceKind(),
                 url = row.source_url,
@@ -82,6 +83,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
             queries.insertRecipe(
                 id = recipe.id.value,
                 title = recipe.title,
+                title_raw = recipe.rawTitle,
                 source_kind = recipe.source.kind.name,
                 source_url = recipe.source.url,
                 source_name = recipe.source.name,
