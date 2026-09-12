@@ -49,23 +49,23 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
-                    Text("Back")
+                    Text("Back", style = MaterialTheme.typography.labelLarge)
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(10.dp))
                 recipe.imagePath?.let {
                     LocalImage(it)
                     Spacer(Modifier.height(12.dp))
                 }
                 Text(recipe.title, style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
-                    text = subtitleFor(recipe),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = subtitleFor(recipe).uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(30.dp))
                 SectionHeading("Ingredients")
             }
 
@@ -75,12 +75,11 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
                 if (group != null && group != previous) {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = group,
+                        text = group.uppercase(),
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                 }
                 IngredientRow(line)
             }
@@ -155,13 +154,13 @@ private fun NoteRow(note: app.cuisson.domain.SourceNote) {
 @Composable
 private fun SectionHeading(text: String) {
     Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(8.dp))
-    HorizontalDivider()
-    Spacer(Modifier.height(8.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    Spacer(Modifier.height(12.dp))
 }
 
 @Composable
@@ -194,16 +193,16 @@ private fun StepRow(number: Int, step: Step, captured: Set<String>) {
     ) {
         Text(
             text = "$number",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.width(28.dp),
+            modifier = Modifier.width(32.dp),
         )
         Column {
             Text(step.text, style = MaterialTheme.typography.bodyLarge)
             step.durationSeconds?.let { seconds ->
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "timer ${seconds / 60} min",
+                    text = "${seconds / 60} MIN TIMER",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )

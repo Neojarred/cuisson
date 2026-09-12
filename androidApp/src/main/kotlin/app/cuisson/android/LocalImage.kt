@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
  * decode draws nothing rather than a broken placeholder.
  */
 @Composable
-fun LocalImage(path: String, height: Int = 200) {
+fun LocalImage(path: String, modifier: Modifier = Modifier.fillMaxWidth().height(210.dp)) {
     val bitmap = remember(path) {
         runCatching { BitmapFactory.decodeFile(path)?.asImageBitmap() }.getOrNull()
     } ?: return
@@ -29,9 +29,6 @@ fun LocalImage(path: String, height: Int = 200) {
         bitmap = bitmap,
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(height.dp)
-            .clip(RoundedCornerShape(12.dp)),
+        modifier = modifier.clip(RoundedCornerShape(10.dp)),
     )
 }
