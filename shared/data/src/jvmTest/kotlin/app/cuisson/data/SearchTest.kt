@@ -41,6 +41,7 @@ class SearchTest {
         notes = null,
         sourceNotes = notes.map { SourceNote(null, it) },
         imagePath = null,
+        chapterId = null,
         language = "en",
         extraction = Extraction(ExtractionTier.STRUCTURED, 1f, false),
         createdAt = Instant.fromEpochMilliseconds(1),
