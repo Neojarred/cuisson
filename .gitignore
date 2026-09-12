@@ -18,3 +18,6 @@ captures/
 # Real pages fetched for measuring extraction coverage. Other people's content,
 # kept out of the repository. Test fixtures are synthetic and live in the test resources.
 /corpus/
+
+# Instructions for the AI assistant working on this, not part of the app.
+/CLAUDE.md
