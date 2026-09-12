@@ -278,7 +278,7 @@ private fun Review(
             item {
                 Spacer(Modifier.height(16.dp))
                 state.imagePath?.let {
-                    LocalImage(it, height = 160)
+                    LocalImage(it, Modifier.fillMaxWidth().height(170.dp))
                     Spacer(Modifier.height(12.dp))
                 }
                 Text(
