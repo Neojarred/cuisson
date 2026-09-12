@@ -31,6 +31,7 @@ dependencies {
     implementation(project(":shared:domain"))
     implementation(project(":shared:data"))
     implementation(project(":shared:importer"))
+    implementation(project(":shared:text"))
     implementation(libs.ktor.client.okhttp)
     implementation(libs.kotlinx.coroutines.core)
 

@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         },
+                        onCook = { CookModeActivity.start(this@MainActivity, open.id) },
                         onBack = { openId = null },
                     )
 

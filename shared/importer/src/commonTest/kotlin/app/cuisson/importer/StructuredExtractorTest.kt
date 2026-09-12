@@ -183,6 +183,23 @@ class StructuredExtractorTest {
     }
 
     @Test
+    fun `a step that tells you to wait carries its timer`() {
+        // The parser for this was right and nothing called it, so every imported recipe
+        // reached Cook Mode with no timers at all. Tested end to end for that reason.
+        val html = page(
+            """
+            {"@type":"Recipe","name":"Stew","recipeIngredient":["1 kg beef"],
+             "recipeInstructions":[
+               {"@type":"HowToStep","text":"Brown the beef all over in a hot pan."},
+               {"@type":"HowToStep","text":"Put the lid on and leave it to simmer for 75 minutes."}]}
+            """.trimIndent()
+        )
+        val draft = assertNotNull(StructuredExtractor.extract(html))
+        assertNull(draft.steps[0].durationSeconds)
+        assertEquals(75 * 60, draft.steps[1].durationSeconds)
+    }
+
+    @Test
     fun `returns null on a page with no recipe`() {
         assertNull(StructuredExtractor.extract("<html><body>Just a blog post.</body></html>"))
         assertNull(

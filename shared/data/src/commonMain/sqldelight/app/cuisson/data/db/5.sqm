@@ -1,0 +1,14 @@
+-- Version 5 to version 6.
+--
+-- The Cook Entry: a record that the user cooked a recipe on a date. Written with one tap
+-- at the end of Cook Mode, because a log that has to be filled in is a log nobody fills.
+
+CREATE TABLE cook_entry (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    recipe_id           TEXT    NOT NULL,
+    cooked_at           INTEGER NOT NULL,
+    rating              INTEGER,
+    note                TEXT
+);
+
+CREATE INDEX cook_entry_recipe ON cook_entry(recipe_id, cooked_at);

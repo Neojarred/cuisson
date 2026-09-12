@@ -277,6 +277,16 @@ class RecipeRepository(private val database: CuissonDatabase) {
     fun fileRecipe(id: RecipeId, chapterId: String, now: Long) =
         queries.fileRecipe(chapterId, now, id.value)
 
+    /** Written with one tap at the end of Cook Mode. */
+    fun logCook(id: RecipeId, at: Long, entryId: String) =
+        queries.insertCookEntry(entryId, id.value, at, null, null)
+
+    fun cookCount(id: RecipeId): Int =
+        queries.cookEntriesFor(id.value).executeAsList().size
+
+    fun lastCooked(id: RecipeId): Long? =
+        queries.cookEntriesFor(id.value).executeAsList().firstOrNull()?.cooked_at
+
     fun setImagePath(id: RecipeId, path: String) {
         queries.setImagePath(path, id.value)
     }

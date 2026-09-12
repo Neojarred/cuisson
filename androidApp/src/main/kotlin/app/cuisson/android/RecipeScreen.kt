@@ -48,6 +48,7 @@ fun RecipeScreen(
     onBack: () -> Unit,
     cookbooks: List<Cookbook> = emptyList(),
     onFile: (Cookbook) -> Unit = {},
+    onCook: () -> Unit = {},
 ) {
     var filing by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
@@ -66,12 +67,17 @@ fun RecipeScreen(
                     TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
                         Text("Back", style = MaterialTheme.typography.labelLarge)
                     }
-                    if (cookbooks.isNotEmpty()) {
-                        TextButton(
-                            onClick = { filing = true },
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
-                            Text("File in…", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        if (cookbooks.isNotEmpty()) {
+                            TextButton(
+                                onClick = { filing = true },
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
+                                Text("File in…", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        TextButton(onClick = onCook, contentPadding = PaddingValues(0.dp)) {
+                            Text("Cook", style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }

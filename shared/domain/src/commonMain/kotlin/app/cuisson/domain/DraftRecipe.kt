@@ -51,6 +51,8 @@ data class DraftIngredient(
 data class DraftStep(
     val text: String,
     val sectionLabel: String? = null,
+    /** Parsed out of the step's own words, so "simmer for 20 minutes" can offer a timer. */
+    val durationSeconds: Int? = null,
 )
 
 /**

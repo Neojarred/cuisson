@@ -112,6 +112,23 @@ SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
 
+-- One tap at the end of Cook Mode. See 5.sqm.
+CREATE TABLE cook_entry (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    recipe_id           TEXT    NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    cooked_at           INTEGER NOT NULL,
+    rating              INTEGER,
+    note                TEXT
+);
+
+CREATE INDEX cook_entry_recipe ON cook_entry(recipe_id, cooked_at);
+
+insertCookEntry:
+INSERT INTO cook_entry(id, recipe_id, cooked_at, rating, note) VALUES (?, ?, ?, ?, ?);
+
+cookEntriesFor:
+SELECT * FROM cook_entry WHERE recipe_id = ? ORDER BY cooked_at DESC;
+
 -- Cookbooks and Chapters. See 4.sqm for why every cookbook has a default chapter.
 CREATE TABLE cookbook (
     id                  TEXT    NOT NULL PRIMARY KEY,

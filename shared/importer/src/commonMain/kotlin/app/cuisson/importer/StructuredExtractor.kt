@@ -127,11 +127,10 @@ object StructuredExtractor {
      * break sentences that belong together.
      */
     private fun addSplit(into: MutableList<DraftStep>, text: String, section: String?) {
-        val parts = text.split(Regex("\n\\s*\n")).map { it.trim() }.filter { it.isNotEmpty() }
-        if (parts.size > 1) {
-            parts.forEach { into += DraftStep(it, section) }
-        } else {
-            into += DraftStep(text, section)
+        val parts = text.split(Regex("\n\\s*\\n")).map { it.trim() }.filter { it.isNotEmpty() }
+        val pieces = if (parts.size > 1) parts else listOf(text)
+        pieces.forEach { piece ->
+            into += DraftStep(piece, section, durationInStep(piece))
         }
     }
 
