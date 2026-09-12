@@ -37,8 +37,12 @@ fun RecipeListScreen(
     onOpen: (Recipe) -> Unit,
     onImport: () -> Unit,
 ) {
-    Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-        Column(modifier = Modifier.padding(horizontal = 22.dp)) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .safeDrawingPadding()
+                .padding(horizontal = 22.dp)
+        ) {
             Spacer(Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

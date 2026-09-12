@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Cuisson" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Only the window background matters here. Everything else is Compose. It is set
+         so the split second before the first frame is paper rather than white. -->
+    <style name="Theme.Cuisson" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/paper</item>
+    </style>
 </resources>

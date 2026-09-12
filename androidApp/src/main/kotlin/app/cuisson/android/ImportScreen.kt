@@ -1,6 +1,7 @@
 package app.cuisson.android
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,7 +46,8 @@ fun ImportScreen(
     onTypedChanged: (String, String) -> Unit = { _, _ -> },
     onParseTyped: (String, String) -> Unit = { _, _ -> },
 ) {
-    Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.safeDrawingPadding()) {
         when (state) {
             is ImportState.AskingForUrl ->
                 AskForUrl(state.input, onUrlChanged, onSubmit, onCancel, onTypeInstead)
@@ -85,6 +87,7 @@ fun ImportScreen(
                 body = state.reason,
                 onCancel = onCancel,
             )
+        }
         }
     }
 }

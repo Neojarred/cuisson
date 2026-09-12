@@ -43,9 +43,9 @@ import app.cuisson.domain.Step
 fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val capturedNoteLabels = recipe.sourceNotes.mapNotNull { it.label?.lowercase() }.toSet()
-    Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+    Surface(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.padding(horizontal = 20.dp),
+            modifier = Modifier.safeDrawingPadding().padding(horizontal = 22.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
@@ -227,9 +227,16 @@ private fun StepRow(number: Int, step: Step, captured: Set<String>) {
 }
 
 private fun subtitleFor(recipe: Recipe): String {
+    // How a recipe was extracted is our business, not the reader's. "STRUCTURED" meant
+    // nothing to anyone holding a knife. What is worth saying is when the result should
+    // not be trusted, and that has its own mark.
     val parts = mutableListOf<String>()
-    recipe.servings?.let { parts += "${it.count.toInt()} servings" }
+    recipe.servings?.let { servings ->
+        val count = if (servings.count % 1.0 == 0.0) servings.count.toInt().toString()
+        else servings.count.toString()
+        parts += listOfNotNull(count, servings.unit ?: "servings").joinToString(" ")
+    }
     recipe.timings.totalMinutes?.let { parts += "$it min" }
-    parts += recipe.extraction.tier.name.lowercase().replace('_', ' ')
+    if (recipe.extraction.needsReview) parts += "needs review"
     return parts.joinToString(" · ")
 }
