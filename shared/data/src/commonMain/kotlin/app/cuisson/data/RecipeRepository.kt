@@ -33,6 +33,9 @@ class RecipeRepository(private val database: CuissonDatabase) {
 
     private val queries = database.recipeQueries
 
+    /** Exposed for tests that need to disturb the index deliberately. */
+    internal fun database() = database
+
     fun count(): Long = queries.countRecipes().executeAsOne()
 
     /**
@@ -84,8 +87,63 @@ class RecipeRepository(private val database: CuissonDatabase) {
         )
     }
 
+    /**
+     * Finds recipes by name or by what goes in them.
+     *
+     * Every term is matched as a prefix, because someone typing "cho" for chocolate
+     * expects to see it before they have finished the word. A query that FTS5 cannot
+     * parse, which mostly means stray punctuation, returns nothing rather than throwing.
+     */
+    fun search(query: String): List<RecipeId> {
+        val terms = query.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .map { term -> term.filter { it.isLetterOrDigit() } }
+            .filter { it.isNotEmpty() }
+        if (terms.isEmpty()) return emptyList()
+        val match = terms.joinToString(" ") { "$it*" }
+        // FTS columns are nullable in the generated types, so a row can in principle
+        // come back without an id. One that does is not a recipe we can open.
+        return runCatching {
+            queries.searchRecipes(match).executeAsList()
+                .mapNotNull { row -> row.recipe_id?.let(::RecipeId) }
+        }.getOrDefault(emptyList<RecipeId>())
+    }
+
+    /**
+     * Puts recipes saved before search existed into the index.
+     *
+     * A migration cannot do this: the index is built from the recipe and its ingredient
+     * lines together, which is a join rather than a column default.
+     */
+    fun backfillSearchIfEmpty() {
+        runCatching {
+            if (queries.countSearchRows().executeAsOne() > 0L) return
+            all().forEach { recipe -> database.transaction { indexRecipe(recipe) } }
+        }
+    }
+
+    /**
+     * Best effort on purpose. A recipe the user just saved matters more than whether it
+     * can be found by searching, so a problem with the index is swallowed rather than
+     * allowed to fail the save.
+     */
+    private fun indexRecipe(recipe: Recipe) = runCatching {
+        queries.deleteSearchRow(recipe.id.value)
+        queries.insertSearchRow(
+            title = listOfNotNull(recipe.title, recipe.rawTitle).joinToString(" "),
+            ingredients = recipe.ingredients.joinToString(" ") { it.rawText },
+            notes = listOfNotNull(
+                recipe.notes,
+                recipe.sourceNotes.joinToString(" ") { it.text }.takeIf { it.isNotBlank() },
+            ).joinToString(" "),
+            recipe_id = recipe.id.value,
+        )
+    }
+
     fun save(recipe: Recipe) {
         database.transaction {
+            indexRecipe(recipe)
             queries.insertRecipe(
                 id = recipe.id.value,
                 title = recipe.title,

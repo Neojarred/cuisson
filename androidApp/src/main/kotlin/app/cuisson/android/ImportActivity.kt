@@ -199,8 +199,10 @@ class ImportActivity : ComponentActivity() {
         val repository = Cuisson.repository(this)
         repository.save(recipe)
 
-        // The picture was already downloaded for the Review, so saving is a rename.
-        imageStore.promoteStaging(id)?.let { repository.setImagePath(recipe.id, it) }
+        // The picture was already downloaded for the Review, so saving is a rename of
+        // that exact file rather than of whatever is sitting in the staging slot.
+        val staged = (state as? ImportState.Reviewing)?.imagePath
+        imageStore.promoteStaged(staged, id)?.let { repository.setImagePath(recipe.id, it) }
 
         // Unless the download had not finished yet, in which case it continues on the
         // application scope. This screen is closing and would cancel anything tied to it.

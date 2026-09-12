@@ -1,0 +1,19 @@
+-- Version 3 to version 4.
+--
+-- Full text search over what a person actually remembers about a recipe: its name, and
+-- what goes in it.
+--
+-- FTS4 rather than FTS5. Android's bundled SQLite does not include the fts5 module, and
+-- creating an fts5 table there fails with "no such module: fts5". The JVM driver used in
+-- tests does include it, so this passed nine tests and crashed on the first phone it
+-- touched. unicode61 folds diacritics by default, which is the part that matters here:
+-- searching "creme" has to find "crème".
+
+CREATE VIRTUAL TABLE recipe_search USING fts4(
+    title,
+    ingredients,
+    notes,
+    recipe_id,
+    notindexed=recipe_id,
+    tokenize=unicode61
+);

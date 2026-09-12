@@ -32,9 +32,15 @@ class ImageStore(context: Context) {
      */
     fun writeStaging(bytes: ByteArray): String = write(STAGING, bytes)
 
-    fun promoteStaging(recipeId: String): String? {
-        val staged = File(directory, "$STAGING.img")
-        if (!staged.exists()) return null
+    /**
+     * Takes a specific staged file, not whichever one happens to be lying around.
+     *
+     * An import abandoned with the back gesture never reaches Discard, so its staged
+     * image survives. Promoting "the staging file" then attached one recipe's photograph
+     * to the next recipe saved.
+     */
+    fun promoteStaged(stagedPath: String?, recipeId: String): String? {
+        val staged = stagedPath?.let(::File)?.takeIf { it.exists() } ?: return null
         val destination = File(directory, "$recipeId.img")
         return if (staged.renameTo(destination)) destination.absolutePath else null
     }

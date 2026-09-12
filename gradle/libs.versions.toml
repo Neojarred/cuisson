@@ -2,6 +2,9 @@
 kotlin = "2.4.10"
 agp = "9.3.2"
 compose-bom = "2026.08.00"
+# Material 3 Expressive is public only from 1.5.0-alpha. Pinned above the BOM
+# deliberately: the expressive APIs are internal in stable 1.4.0.
+material3 = "1.5.0-alpha28"
 sqldelight = "2.3.2"
 ktor = "3.5.2"
 serialization = "1.11.0"
@@ -33,7 +36,7 @@ compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
-compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -109,6 +109,30 @@ SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
 
+-- Search. FTS4, not FTS5: Android's SQLite has no fts5 module. Diacritics are folded by
+-- unicode61, so "creme" finds "crème". See 3.sqm.
+CREATE VIRTUAL TABLE recipe_search USING fts4(
+    title,
+    ingredients,
+    notes,
+    recipe_id,
+    notindexed=recipe_id,
+    tokenize=unicode61
+);
+
+insertSearchRow:
+INSERT INTO recipe_search(title, ingredients, notes, recipe_id) VALUES (?, ?, ?, ?);
+
+deleteSearchRow:
+DELETE FROM recipe_search WHERE recipe_id = ?;
+
+countSearchRows:
+SELECT count(*) FROM recipe_search;
+
+-- No ORDER BY rank: that is an FTS5 column and this is FTS4.
+searchRecipes:
+SELECT recipe_id FROM recipe_search WHERE recipe_search MATCH ?;
+
 insertSourceNote:
 INSERT OR REPLACE INTO source_note(id, recipe_id, position, label, text)
 VALUES (?, ?, ?, ?, ?);

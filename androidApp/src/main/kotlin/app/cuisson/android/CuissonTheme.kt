@@ -1,82 +1,65 @@
 package app.cuisson.android
 
 import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 
 /**
- * Paper rather than white, ink rather than black, and one accent.
+ * Material 3 Expressive, with the device's own colours where it has them.
  *
- * A recipe is read in a kitchen under warm light with greasy hands, so the page is a warm
- * off-white and the text is a soft black. Pure white on pure black is what a settings
- * screen looks like. The accent is a burnt orange, taken from food without being a
- * picture of a tomato, and it is used sparingly: step numbers, group names, one button.
+ * Deliberately borrowed rather than invented. Cuisson has three screens, which is not
+ * enough to design an app from, and a coherent system we did not write beats a
+ * half-finished one we did. Our own look comes back once there is an app to look at.
+ *
+ * Dynamic colour also settles a real problem: an accent we choose competes with Mealie,
+ * whose default primary is an orange too. An accent taken from the user's wallpaper
+ * belongs to them and competes with nothing.
+ *
+ * The one thing kept from the first pass is Fraunces on the recipe titles, because that
+ * is the part that stops a list of recipes reading like a list of settings.
  */
-private val Ink = Color(0xFF1C1917)
-private val InkSoft = Color(0xFF6B625B)
-private val Paper = Color(0xFFFBF7F1)
-private val PaperRaised = Color(0xFFFFFDFA)
-private val Rule = Color(0xFFE8E0D5)
-private val Ember = Color(0xFFB4451F)
-private val EmberSoft = Color(0xFFF3E3DB)
-
-private val NightInk = Color(0xFFF2EDE6)
-private val NightInkSoft = Color(0xFFA79E95)
-private val NightPaper = Color(0xFF15130F)
-private val NightRaised = Color(0xFF1E1B17)
-private val NightRule = Color(0xFF332E28)
-private val NightEmber = Color(0xFFE8845C)
-
-private val LightScheme = lightColorScheme(
-    primary = Ember,
-    onPrimary = Color.White,
-    primaryContainer = EmberSoft,
-    onPrimaryContainer = Ink,
-    background = Paper,
-    onBackground = Ink,
-    surface = Paper,
-    onSurface = Ink,
-    surfaceVariant = PaperRaised,
-    onSurfaceVariant = InkSoft,
-    outlineVariant = Rule,
-    error = Color(0xFF9A3412),
+private val FallbackLight = lightColorScheme(
+    primary = Color(0xFF8A4B2A),
+    background = Color(0xFFFBF7F1),
+    surface = Color(0xFFFBF7F1),
 )
 
-private val DarkScheme = darkColorScheme(
-    primary = NightEmber,
-    onPrimary = Color(0xFF2A1008),
-    primaryContainer = Color(0xFF3A1D12),
-    onPrimaryContainer = NightInk,
-    background = NightPaper,
-    onBackground = NightInk,
-    surface = NightPaper,
-    onSurface = NightInk,
-    surfaceVariant = NightRaised,
-    onSurfaceVariant = NightInkSoft,
-    outlineVariant = NightRule,
-    error = Color(0xFFEF9A7B),
+private val FallbackDark = darkColorScheme(
+    primary = Color(0xFFE8A17C),
+    background = Color(0xFF15130F),
+    surface = Color(0xFF15130F),
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CuissonTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
-    val scheme = if (dark) DarkScheme else LightScheme
-    val view = LocalContext.current as? Activity
+    val context = LocalContext.current
 
-    // The status bar icons have to be dark on paper and light at night, or half of them
-    // disappear into the background. This was on the list from phase 0.
+    val scheme = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> FallbackDark
+        else -> FallbackLight
+    }
+
+    // Status bar icons have to be dark on a light background and light on a dark one, or
+    // half of them vanish. window.statusBarColor is ignored from Android 15, so the
+    // surface paints under the bar and only the icon appearance is set here.
     SideEffect {
-        view?.window?.let { window ->
-            window.statusBarColor = scheme.background.toArgb()
-            window.navigationBarColor = scheme.background.toArgb()
+        (context as? Activity)?.window?.let { window ->
             WindowCompat.getInsetsController(window, window.decorView).apply {
                 isAppearanceLightStatusBars = !dark
                 isAppearanceLightNavigationBars = !dark
@@ -84,9 +67,10 @@ fun CuissonTheme(content: @Composable () -> Unit) {
         }
     }
 
-    MaterialTheme(
+    MaterialExpressiveTheme(
         colorScheme = scheme,
         typography = CuissonTypography,
+        motionScheme = MotionScheme.expressive(),
         content = content,
     )
 }

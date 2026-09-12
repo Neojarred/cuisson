@@ -43,10 +43,15 @@ fun LocalImage(path: String, modifier: Modifier = Modifier.fillMaxWidth().height
     val target = 512
     val key = "$path@$target"
 
-    val bitmap by produceState<ImageBitmap?>(initialValue = cache[key]?.asImageBitmap(), key) {
-        if (value != null) return@produceState
-        value = withContext(Dispatchers.IO) {
-            decodeScaled(path, target)?.also { cache.put(key, it) }?.asImageBitmap()
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, key) {
+        // Reset first. produceState keeps the previous value when its key changes, so a
+        // recycled list row went on showing the photograph of the recipe that had just
+        // scrolled away.
+        value = cache[key]?.asImageBitmap()
+        if (value == null) {
+            value = withContext(Dispatchers.IO) {
+                decodeScaled(path, target)?.also { cache.put(key, it) }?.asImageBitmap()
+            }
         }
     }
 

@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +36,9 @@ import app.cuisson.domain.Recipe
 @Composable
 fun RecipeListScreen(
     recipes: List<Recipe>,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    total: Int,
     onOpen: (Recipe) -> Unit,
     onImport: () -> Unit,
 ) {
@@ -64,15 +69,27 @@ fun RecipeListScreen(
                     Text("Import", style = MaterialTheme.typography.titleMedium)
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(14.dp))
+            SearchField(query, onQueryChange)
+            Spacer(Modifier.height(10.dp))
             Text(
-                text = if (recipes.isEmpty()) "" else "${recipes.size} saved",
+                text = when {
+                    total == 0 -> ""
+                    query.isNotBlank() -> "${recipes.size} of $total"
+                    else -> "$total saved"
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
 
-            if (recipes.isEmpty()) {
+            if (recipes.isEmpty() && query.isNotBlank()) {
+                Text(
+                    text = "Nothing matches that.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (recipes.isEmpty()) {
                 EmptyLibrary()
             } else {
                 LazyColumn {
@@ -84,6 +101,31 @@ fun RecipeListScreen(
             }
         }
     }
+}
+
+/**
+ * Searches names, ingredients and the author's notes at once, because what a person
+ * remembers about a recipe is as often "the one with miso" as its title.
+ */
+@Composable
+private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text("Search recipes and ingredients", style = MaterialTheme.typography.bodyMedium)
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(14.dp),
+        trailingIcon = if (query.isBlank()) null else {
+            {
+                TextButton(onClick = { onQueryChange("") }) {
+                    Text("Clear", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
