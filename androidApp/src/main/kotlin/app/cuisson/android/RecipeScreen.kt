@@ -21,12 +21,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.cuisson.domain.IngredientLine
 import app.cuisson.domain.Recipe
+import app.cuisson.domain.referencedNoteLabels
 import app.cuisson.domain.Step
 
 /**
@@ -89,34 +94,61 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
             }
 
             if (recipe.sourceNotes.isNotEmpty()) {
+                val referenced = recipe.referencedNoteLabels()
+                val pointedAt = recipe.sourceNotes.filter {
+                    it.label?.lowercase() in referenced
+                }
+                val rest = recipe.sourceNotes - pointedAt.toSet()
+
                 item {
                     Spacer(Modifier.height(28.dp))
                     SectionHeading("Notes from the source")
                     Text(
-                        text = "Written by " + (recipe.source.name ?: "the author") +
-                            ", kept as they wrote it.",
+                        text = "Written by " + (recipe.source.name ?: "the author") + ".",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                items(recipe.sourceNotes) { note ->
-                    Row(modifier = Modifier.padding(vertical = 6.dp)) {
-                        note.label?.let {
+
+                items(pointedAt) { note -> NoteRow(note) }
+
+                if (rest.isNotEmpty()) {
+                    item {
+                        var expanded by remember { mutableStateOf(false) }
+                        TextButton(
+                            onClick = { expanded = !expanded },
+                            contentPadding = PaddingValues(0.dp),
+                        ) {
                             Text(
-                                text = it,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.width(36.dp),
+                                if (expanded) "Hide the author's other notes"
+                                else "${rest.size} more notes from the author",
                             )
                         }
-                        Text(note.text, style = MaterialTheme.typography.bodyMedium)
+                        if (expanded) {
+                            Column { rest.forEach { NoteRow(it) } }
+                        }
                     }
                 }
             }
 
             item { Spacer(Modifier.height(48.dp)) }
         }
+    }
+}
+
+@Composable
+private fun NoteRow(note: app.cuisson.domain.SourceNote) {
+    Row(modifier = Modifier.padding(vertical = 6.dp)) {
+        note.label?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.width(36.dp),
+            )
+        }
+        Text(note.text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

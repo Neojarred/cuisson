@@ -28,3 +28,10 @@ because that is still their own copy.
 
 They are shown attributed rather than mixed into the recipe, so a reader can see that the
 advice is the author's and not Cuisson's.
+
+Only the notes an ingredient or a Step actually points at are shown; the rest sit behind
+one tap. A publisher's notes section can be longer than the recipe, and most of it is the
+author writing about their recipe rather than telling anyone how to cook it. RecipeTin
+Eats' rendang has nineteen notes, of which nine are referenced and one records that the
+recipe was first published in 2014. The narrow justification for capturing notes at all
+was the reference that could not be satisfied, so that is what earns a place on screen.
