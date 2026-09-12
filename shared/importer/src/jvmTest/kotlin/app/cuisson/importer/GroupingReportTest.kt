@@ -17,9 +17,6 @@ class GroupingReportTest {
             val groups = draft.ingredientLines.mapNotNull { it.group }.distinct()
             if (groups.isEmpty()) {
                 println("  -   ${file.nameWithoutExtension}")
-                if (file.nameWithoutExtension in setOf("ricardo-lasagna", "loveandlemons")) {
-                    println("        ${IngredientGrouper.explain(file.readText(), draft.ingredientTexts)}")
-                }
             } else {
                 grouped++
                 println("  OK  ${file.nameWithoutExtension}: ${groups.joinToString(" | ")}")

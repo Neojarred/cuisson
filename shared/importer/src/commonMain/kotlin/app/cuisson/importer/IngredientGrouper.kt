@@ -24,43 +24,20 @@ import com.fleeksoft.ksoup.nodes.Element
  */
 object IngredientGrouper {
 
-    /** Diagnostics for the corpus report. Not used by the app. */
-    internal fun explain(html: String, ingredients: List<String>): String {
-        val document = Ksoup.parse(html)
-        document.select("script, style, noscript").forEach { it.remove() }
-        val ordered = mutableListOf<Element>()
-        collect(document.body(), ordered)
-        val needles = ingredients.map { normalise(it) }
-        val statedBy = HashMap<Element, Int>()
-        ordered.forEach { element ->
-            if (element.childrenSize() != 0) return@forEach
-            val text = normalise(element.text())
-            if (text.length < 6) return@forEach
-            val index = needles.indexOfFirst { it.length >= 6 && text.contains(it) }
-            if (index >= 0) statedBy[element] = index
-        }
-        val distinctStated = statedBy.values.distinct().size
-        val candidates = ordered.filter {
-            ingredientsUnder(it, statedBy).size == distinctStated
-        }
-        val container = candidates.minByOrNull { descendantCount(it) }
-        val inside = mutableListOf<Element>()
-        if (container != null) collect(container, inside)
-        val headings = inside.filter { it !in statedBy && looksLikeHeading(it) }
-            .map { it.text().trim() }
-        return "stated=${statedBy.size} distinct=$distinctStated " +
-            "candidates=${candidates.size} container=${container?.tagName()}." +
-            "${container?.className()?.take(28)} inside=${inside.size} " +
-            "headings=${headings.take(6)}"
-    }
-
     fun group(html: String, ingredients: List<String>): List<DraftIngredient> {
         if (ingredients.size < 2) return ingredients.map(::DraftIngredient)
 
         val positions = runCatching { headingsAndRows(html, ingredients) }.getOrNull()
             ?: return ingredients.map(::DraftIngredient)
 
-        val labels = ingredients.indices.map { positions.groupFor(it) }
+        // An ingredient too short to locate in the page, "salt" or "poivre", has no
+        // position and so no heading above it. Left as it is, that hole splits a group in
+        // two and the heading is printed twice. The publisher's order is authoritative:
+        // an unplaced ingredient sitting between two Meat Sauce items is Meat Sauce.
+        var carried: String? = null
+        val labels = ingredients.indices.map { index ->
+            positions.groupFor(index)?.also { carried = it } ?: carried
+        }
 
         // Two distinct labels counting the absence of one, because a single heading
         // partway down the list is meaningful by itself: everything above it is the

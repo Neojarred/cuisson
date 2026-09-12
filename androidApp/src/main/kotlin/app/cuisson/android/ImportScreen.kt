@@ -325,11 +325,15 @@ private fun Review(
                         modifier = Modifier.padding(end = 12.dp),
                     )
                     Column {
-                        step.sectionLabel?.let {
+                        // Only where it changes. Ricardo labels every step "Meat Sauce",
+                        // and repeating that above all eleven of them is noise.
+                        val section = step.sectionLabel
+                        if (section != null && section != draft.steps.getOrNull(index - 1)?.sectionLabel) {
                             Text(
-                                text = it,
+                                text = section,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                         Text(step.text)

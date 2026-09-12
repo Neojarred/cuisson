@@ -80,6 +80,42 @@ class IngredientGrouperTest {
     }
 
     @Test
+    fun `an ingredient the page does not state keeps the group above it`() {
+        // "salt" is too short to locate safely, so it has no row of its own. Leaving it
+        // ungrouped split Meat Sauce in two and printed that heading twice.
+        val withSalt = listOf(
+            "500 g ground beef", "salt", "2 onions, chopped", "400 g tinned tomatoes",
+            "50 g butter", "50 g plain flour", "500 ml whole milk",
+        )
+        val page = """
+            <html><body><div class="recipe"><ul>
+              <li>
+                <h3 class="subtitle">Meat Sauce</h3>
+                <ul>
+                  <li><div>500 g ground beef</div></li>
+                  <li><div>salt</div></li>
+                  <li><div>2 onions, chopped</div></li>
+                  <li><div>400 g tinned tomatoes</div></li>
+                </ul>
+              </li>
+              <li>
+                <h3 class="subtitle">Bechamel Sauce</h3>
+                <ul>
+                  <li><div>50 g butter</div></li>
+                  <li><div>50 g plain flour</div></li>
+                  <li><div>500 ml whole milk</div></li>
+                </ul>
+              </li>
+            </ul></div></body></html>
+        """.trimIndent()
+        val groups = IngredientGrouper.group(page, withSalt).map { it.group }
+        assertEquals("Meat Sauce", groups[1])
+        assertEquals(listOf("Meat Sauce", "Bechamel Sauce"), groups.filterNotNull().distinct())
+        // One change of group across the whole list, so each heading is printed once.
+        assertEquals(1, groups.zipWithNext().count { (a, b) -> a != b })
+    }
+
+    @Test
     fun `a page with no headings is left flat`() {
         val page = """
             <html><body><ul>
