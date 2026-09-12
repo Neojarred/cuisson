@@ -42,6 +42,7 @@ import app.cuisson.domain.Step
 @Composable
 fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
+    val capturedNoteLabels = recipe.sourceNotes.mapNotNull { it.label?.lowercase() }.toSet()
     Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         LazyColumn(
             modifier = Modifier.padding(horizontal = 20.dp),
@@ -90,43 +91,42 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
             }
 
             itemsIndexed(recipe.steps) { index, step ->
-                StepRow(index + 1, step)
+                StepRow(index + 1, step, captured = capturedNoteLabels)
             }
 
             if (recipe.sourceNotes.isNotEmpty()) {
-                val referenced = recipe.referencedNoteLabels()
-                val pointedAt = recipe.sourceNotes.filter {
-                    it.label?.lowercase() in referenced
-                }
-                val rest = recipe.sourceNotes - pointedAt.toSet()
-
                 item {
                     Spacer(Modifier.height(28.dp))
-                    SectionHeading("Notes from the source")
-                    Text(
-                        text = "Written by " + (recipe.source.name ?: "the author") + ".",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                items(pointedAt) { note -> NoteRow(note) }
-
-                if (rest.isNotEmpty()) {
-                    item {
-                        var expanded by remember { mutableStateOf(false) }
-                        TextButton(
-                            onClick = { expanded = !expanded },
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
+                    // Off the recipe's flow entirely. A publisher's notes run longer
+                    // than the recipe and mix substitutions worth having with method
+                    // narration and the date the post was first published. Which is
+                    // which is a judgement no rule here can make, so the reader makes
+                    // it. Cook Mode is where an individual note earns its place, shown
+                    // against the step that points at it.
+                    val referenced = recipe.referencedNoteLabels()
+                    val ordered = recipe.sourceNotes.sortedByDescending {
+                        it.label?.lowercase() in referenced
+                    }
+                    var expanded by remember { mutableStateOf(false) }
+                    HorizontalDivider()
+                    TextButton(
+                        onClick = { expanded = !expanded },
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                    ) {
+                        Text(
+                            text = if (expanded) "Hide the author's notes"
+                            else "Notes from the author · ${recipe.sourceNotes.size}",
+                        )
+                    }
+                    if (expanded) {
+                        Column {
                             Text(
-                                if (expanded) "Hide the author's other notes"
-                                else "${rest.size} more notes from the author",
+                                text = "Written by " + (recipe.source.name ?: "the author") + ".",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                        }
-                        if (expanded) {
-                            Column { rest.forEach { NoteRow(it) } }
+                            Spacer(Modifier.height(8.dp))
+                            ordered.forEach { NoteRow(it) }
                         }
                     }
                 }
@@ -187,7 +187,7 @@ private fun IngredientRow(line: IngredientLine) {
 }
 
 @Composable
-private fun StepRow(number: Int, step: Step) {
+private fun StepRow(number: Int, step: Step, captured: Set<String>) {
     Row(
         modifier = Modifier.padding(vertical = 8.dp),
         verticalAlignment = Alignment.Top,
@@ -208,12 +208,17 @@ private fun StepRow(number: Int, step: Step) {
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            if (step.references.isNotEmpty()) {
+            // Only the references we could not satisfy. Warning about a note that is
+            // sitting in the list below contradicts the screen it is printed on.
+            val missing = step.references.filterNot { reference ->
+                reference.filter { it.isLetterOrDigit() }
+                    .lowercase()
+                    .removePrefix("note") in captured
+            }
+            if (missing.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
-                // The source pointed at something we did not capture. Saying so beats
-                // looking complete and failing the cook halfway through.
                 Text(
-                    text = "refers to ${step.references.joinToString(", ")}, not captured",
+                    text = "refers to ${missing.joinToString(", ")}, not captured",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
