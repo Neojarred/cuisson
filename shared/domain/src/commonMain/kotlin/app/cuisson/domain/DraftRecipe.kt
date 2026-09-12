@@ -22,7 +22,7 @@ data class DraftRecipe(
     val prepMinutes: Int? = null,
     val cookMinutes: Int? = null,
     val totalMinutes: Int? = null,
-    val ingredientLines: List<String> = emptyList(),
+    val ingredientLines: List<DraftIngredient> = emptyList(),
     val steps: List<DraftStep> = emptyList(),
     val language: String? = null,
     val tier: ExtractionTier = ExtractionTier.STRUCTURED,
@@ -30,7 +30,22 @@ data class DraftRecipe(
 ) {
     val looksUsable: Boolean
         get() = title.isNotBlank() && ingredientLines.isNotEmpty() && steps.isNotEmpty()
+
+    /** The ingredient lines as written, without their grouping. */
+    val ingredientTexts: List<String> get() = ingredientLines.map { it.text }
 }
+
+/**
+ * One ingredient as the source wrote it, and the heading it sat under.
+ *
+ * [group] is the publisher's own division of the list, such as "Meat Sauce" or
+ * "Bechamel", which a lasagne needs and a flat list destroys. It is absent far more often
+ * than it is present, because most sites do not say.
+ */
+data class DraftIngredient(
+    val text: String,
+    val group: String? = null,
+)
 
 data class DraftStep(
     val text: String,

@@ -42,11 +42,20 @@ class TitleTidyTest {
     }
 
     @Test
+    fun `drops a boast at the front too`() {
+        assertEquals("Lentil Soup", TitleTidy.tidy("Best Lentil Soup"))
+        assertEquals("Chocolate Chip Cookies", TitleTidy.tidy("BA's Best Chocolate Chip Cookies"))
+        assertEquals("Chocolate Chip Cookies", TitleTidy.tidy("BA\u2019s Best Chocolate Chip Cookies"))
+        assertEquals("Brownies", TitleTidy.tidy("The Best Brownies"))
+    }
+
+    @Test
     fun `leaves a title that is already a title`() {
         assertEquals("Beef Rendang", TitleTidy.tidy("Beef Rendang"))
         assertEquals("Vegetarian Chili", TitleTidy.tidy("Vegetarian Chili"))
         assertEquals("Crock-Pot Potato Soup", TitleTidy.tidy("Crock-Pot Potato Soup"))
-        assertEquals("Best Lentil Soup", TitleTidy.tidy("Best Lentil Soup"))
+        // "Easy" distinguishes this recipe from the site's other lasagne, so it stays.
+        assertEquals("Easy classic lasagne", TitleTidy.tidy("Easy classic lasagne"))
     }
 
     @Test

@@ -40,7 +40,7 @@ class CorpusReportTest {
                 buildString {
                     append(file.nameWithoutExtension.padEnd(16))
                     append(if (draft.looksUsable) "OK   " else "THIN ")
-                    append("ing=${draft.ingredientLines.size.toString().padEnd(3)}")
+                    append("ing=${draft.ingredientTexts.size.toString().padEnd(3)}")
                     append("steps=${draft.steps.size.toString().padEnd(3)}")
                     append("yield=${(draft.servingsText ?: "-").take(14).padEnd(15)}")
                     append("total=${(draft.totalMinutes?.toString() ?: "-").padEnd(5)}")
@@ -48,7 +48,7 @@ class CorpusReportTest {
                 }
             )
             println("    title:  ${draft.title.take(66)}")
-            draft.ingredientLines.take(2).forEach { println("    ing:    $it") }
+            draft.ingredientTexts.take(2).forEach { println("    ing:    $it") }
             draft.steps.firstOrNull()?.let { println("    step 1: ${it.text.take(66)}") }
         }
         println("=".repeat(78))

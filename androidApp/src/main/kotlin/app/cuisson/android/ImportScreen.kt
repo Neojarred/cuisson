@@ -298,8 +298,20 @@ private fun Review(
                 Spacer(Modifier.height(20.dp))
                 Heading("Ingredients")
             }
-            items(draft.ingredientLines) { line ->
-                Text(line, modifier = Modifier.padding(vertical = 4.dp))
+            itemsIndexed(draft.ingredientLines) { index, line ->
+                val previous = draft.ingredientLines.getOrNull(index - 1)?.group
+                val group = line.group
+                if (group != null && group != previous) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = group,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                }
+                Text(line.text, modifier = Modifier.padding(vertical = 4.dp))
             }
             item {
                 Spacer(Modifier.height(20.dp))

@@ -36,6 +36,15 @@ internal object TitleTidy {
             }
         }
 
+        // "BA's Best Chocolate Chip Cookies" is a magazine's brand in front of a dish,
+        // and "Best Lentil Soup" is "Lasagna (The Best)" with the words reordered.
+        LEADING_BOAST.find(title)?.let { match ->
+            val rest = title.drop(match.value.length).trim()
+            // A shorter floor than the garnish cut uses: "Lentil Soup" and "Brownies"
+            // are complete titles, whereas cutting a menu description short is not.
+            if (rest.length >= SHORTEST_NAME) title = rest.replaceFirstChar { it.uppercaseChar() }
+        }
+
         // "Recette de la tarte tatin" is a title about a recipe rather than a title.
         for (prefix in LEADING_FILLER) {
             if (title.length > prefix.length + 6 && title.startsWith(prefix, ignoreCase = true)) {
@@ -75,8 +84,11 @@ internal object TitleTidy {
     /** Long enough that a list of them cannot be scanned. */
     private const val LONG_TITLE = 60
 
-    /** Below this a cut leaves a stub rather than a dish. */
+    /** Below this a garnish cut leaves a stub rather than a dish. */
     private const val SHORTEST_DISH = 12
+
+    /** A dish can be named in one short word. "Brownies" is a title. */
+    private const val SHORTEST_NAME = 5
 
     private fun isJunkTail(tail: String, sourceHost: String?): Boolean {
         if (tail.isEmpty() || tail.split(" ").size > 5) return false
@@ -89,6 +101,15 @@ internal object TitleTidy {
     }
 
     private val SEPARATORS = listOf(" : ", " - ", " — ", " – ")
+
+    /**
+     * A boast at the front of a title: "Best", "The Best", or a publication claiming it,
+     * as in "BA's Best". The apostrophe may be either kind.
+     */
+    private val LEADING_BOAST = Regex(
+        """^(?:the\s+best|best|our\s+best|my\s+best|\S+['’]s\s+best)\s+""",
+        RegexOption.IGNORE_CASE,
+    )
 
     private val GARNISH_JOINS = listOf(" with ", " avec ", ", ", " served ", " accompagne")
 

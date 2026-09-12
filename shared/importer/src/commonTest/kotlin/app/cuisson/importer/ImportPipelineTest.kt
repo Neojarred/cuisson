@@ -40,7 +40,7 @@ class ImportPipelineTest {
             .importUrl("https://example.com/onion-soup")
         val ready = assertIs<ImportOutcome.Ready>(outcome)
         assertEquals("Onion soup", ready.draft.title)
-        assertEquals(2, ready.draft.ingredientLines.size)
+        assertEquals(2, ready.draft.ingredientTexts.size)
     }
 
     @Test
@@ -99,7 +99,7 @@ class ImportPipelineTest {
             .importUrl("https://example.com/thin")
         val needsWork = assertIs<ImportOutcome.NeedsWork>(outcome)
         assertEquals(ExtractionTier.STRUCTURED, needsWork.draft.tier)
-        assertEquals(listOf("2 eggs"), needsWork.draft.ingredientLines)
+        assertEquals(listOf("2 eggs"), needsWork.draft.ingredientTexts)
     }
 
     @Test

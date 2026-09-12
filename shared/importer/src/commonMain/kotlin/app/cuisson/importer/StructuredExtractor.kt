@@ -29,11 +29,15 @@ object StructuredExtractor {
         val title = TitleTidy.tidy(rawTitle, hostOf(sourceUrl))
         if (title.isBlank()) warnings += ExtractionWarning.NO_TITLE
 
-        val ingredients = (recipe["recipeIngredient"] ?: recipe["ingredients"])
+        val ingredientTexts = (recipe["recipeIngredient"] ?: recipe["ingredients"])
             .allStrings()
             .map(::cleanText)
             .filter { it.isNotBlank() }
-        if (ingredients.isEmpty()) warnings += ExtractionWarning.NO_INGREDIENTS
+        if (ingredientTexts.isEmpty()) warnings += ExtractionWarning.NO_INGREDIENTS
+
+        // The structured data is a flat list on every site checked, so the publisher's
+        // own division of it has to come from the page itself. See IngredientGrouper.
+        val ingredients = IngredientGrouper.group(html, ingredientTexts)
 
         val steps = readInstructions(recipe["recipeInstructions"], warnings)
         if (steps.isEmpty()) warnings += ExtractionWarning.NO_STEPS

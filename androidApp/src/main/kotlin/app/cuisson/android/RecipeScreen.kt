@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,7 +62,19 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
                 SectionHeading("Ingredients")
             }
 
-            items(recipe.ingredients) { line ->
+            itemsIndexed(recipe.ingredients) { index, line ->
+                val previous = recipe.ingredients.getOrNull(index - 1)?.groupLabel
+                val group = line.groupLabel
+                if (group != null && group != previous) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = group,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                }
                 IngredientRow(line)
             }
 

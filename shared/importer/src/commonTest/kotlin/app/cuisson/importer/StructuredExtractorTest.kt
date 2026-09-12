@@ -37,7 +37,7 @@ class StructuredExtractorTest {
         assertEquals("Classic lasagne", draft.title)
         assertEquals("6", draft.servingsText)
         assertEquals(75, draft.totalMinutes)
-        assertEquals(listOf("500g beef mince", "2 onions, chopped"), draft.ingredientLines)
+        assertEquals(listOf("500g beef mince", "2 onions, chopped"), draft.ingredientTexts)
         assertEquals(2, draft.steps.size)
         assertTrue(draft.looksUsable)
     }
@@ -116,7 +116,7 @@ class StructuredExtractorTest {
         )
         val draft = assertNotNull(StructuredExtractor.extract(html))
         assertEquals("Sauce & things", draft.title)
-        assertEquals(listOf("½ tsp salt", "1 & a bit"), draft.ingredientLines)
+        assertEquals(listOf("½ tsp salt", "1 & a bit"), draft.ingredientTexts)
         assertEquals("Simmer gently.", draft.steps.single().text)
         assertTrue(ExtractionWarning.STEPS_CONTAINED_MARKUP in draft.warnings)
     }
@@ -178,7 +178,7 @@ class StructuredExtractorTest {
         val draft = assertNotNull(StructuredExtractor.extract(html))
         // The description is the one genuinely copyrighted part of a recipe page, and it
         // is also the waffle. There is deliberately nowhere for it to go.
-        assertTrue(draft.ingredientLines.none { it.contains("grandmother", ignoreCase = true) })
+        assertTrue(draft.ingredientTexts.none { it.contains("grandmother", ignoreCase = true) })
         assertTrue(draft.steps.none { it.text.contains("grandmother", ignoreCase = true) })
     }
 

@@ -28,7 +28,8 @@ fun DraftRecipe.toRecipe(id: String, now: Instant): Recipe = Recipe(
         IngredientLine(
             id = "$id-i$index",
             position = index,
-            rawText = line,
+            rawText = line.text,
+            groupLabel = line.group,
         )
     },
     steps = steps.mapIndexed { index, step ->

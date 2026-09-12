@@ -1,5 +1,6 @@
 package app.cuisson.importer
 
+import app.cuisson.domain.DraftIngredient
 import app.cuisson.domain.DraftRecipe
 import app.cuisson.domain.DraftStep
 import app.cuisson.domain.ExtractionTier
@@ -59,7 +60,7 @@ object TextRecipeParser {
 
         return DraftRecipe(
             title = title,
-            ingredientLines = ingredients,
+            ingredientLines = ingredients.map { DraftIngredient(it) },
             steps = steps.map { DraftStep(it) },
             tier = ExtractionTier.HAND_WRITTEN,
             warnings = warnings,
