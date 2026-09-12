@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.cuisson.domain.IngredientLine
+import app.cuisson.domain.Cookbook
 import app.cuisson.domain.Recipe
 import app.cuisson.domain.referencedNoteLabels
 import app.cuisson.domain.Step
@@ -40,7 +43,13 @@ import app.cuisson.domain.Step
  * "5 clove garlic". See docs/adr/0004.
  */
 @Composable
-fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
+fun RecipeScreen(
+    recipe: Recipe,
+    onBack: () -> Unit,
+    cookbooks: List<Cookbook> = emptyList(),
+    onFile: (Cookbook) -> Unit = {},
+) {
+    var filing by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
     val capturedNoteLabels = recipe.sourceNotes.mapNotNull { it.label?.lowercase() }.toSet()
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -50,8 +59,21 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
         ) {
             item {
                 Spacer(Modifier.height(6.dp))
-                TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
-                    Text("Back", style = MaterialTheme.typography.labelLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
+                        Text("Back", style = MaterialTheme.typography.labelLarge)
+                    }
+                    if (cookbooks.isNotEmpty()) {
+                        TextButton(
+                            onClick = { filing = true },
+                            contentPadding = PaddingValues(0.dp),
+                        ) {
+                            Text("File in…", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
                 }
                 Spacer(Modifier.height(10.dp))
                 recipe.imagePath?.let {
@@ -134,6 +156,34 @@ fun RecipeScreen(recipe: Recipe, onBack: () -> Unit) {
             item { Spacer(Modifier.height(48.dp)) }
         }
     }
+}
+
+/** Filing is one tap from the recipe, and never demanded at import. */
+@Composable
+private fun FilingDialog(
+    cookbooks: List<Cookbook>,
+    onPick: (Cookbook) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("File in", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column {
+                cookbooks.forEach { cookbook ->
+                    Text(
+                        text = cookbook.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(cookbook) }
+                            .padding(vertical = 12.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

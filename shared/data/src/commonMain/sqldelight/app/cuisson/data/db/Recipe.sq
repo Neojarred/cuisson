@@ -18,6 +18,9 @@ CREATE TABLE recipe (
     -- A path inside the app's own storage. Never a remote address: images are copied
     -- to the device so the recipe works offline, per ADR-0007.
     image_path          TEXT,
+    -- The Chapter this recipe is filed in. Every Cookbook has a default Chapter, so a
+    -- recipe nobody has filed still has one: the default Chapter of Unfiled.
+    chapter_id          TEXT,
     language            TEXT    NOT NULL DEFAULT 'en',
     extraction_tier     TEXT    NOT NULL,
     extraction_conf     REAL    NOT NULL DEFAULT 0.0,
@@ -78,9 +81,9 @@ insertRecipe:
 INSERT OR REPLACE INTO recipe(
     id, title, title_raw, source_kind, source_url, source_name,
     servings_count, servings_unit, prep_minutes, cook_minutes, total_minutes,
-    notes, image_path, language, extraction_tier, extraction_conf, needs_review,
-    created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    notes, image_path, chapter_id, language, extraction_tier, extraction_conf,
+    needs_review, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 setImagePath:
 UPDATE recipe SET image_path = ? WHERE id = ?;
@@ -108,6 +111,53 @@ SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;
+
+-- Cookbooks and Chapters. See 4.sqm for why every cookbook has a default chapter.
+CREATE TABLE cookbook (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    name                TEXT    NOT NULL,
+    position            INTEGER NOT NULL,
+    created_at          INTEGER NOT NULL
+);
+
+CREATE TABLE chapter (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    cookbook_id         TEXT    NOT NULL REFERENCES cookbook(id) ON DELETE CASCADE,
+    name                TEXT    NOT NULL,
+    position            INTEGER NOT NULL
+);
+
+CREATE INDEX chapter_cookbook ON chapter(cookbook_id, position);
+CREATE INDEX recipe_chapter ON recipe(chapter_id);
+
+insertCookbook:
+INSERT INTO cookbook(id, name, position, created_at) VALUES (?, ?, ?, ?);
+
+insertChapter:
+INSERT INTO chapter(id, cookbook_id, name, position) VALUES (?, ?, ?, ?);
+
+renameCookbook:
+UPDATE cookbook SET name = ? WHERE id = ?;
+
+deleteCookbook:
+DELETE FROM cookbook WHERE id = ? AND id != 'unfiled';
+
+selectCookbooks:
+SELECT cookbook.*, count(recipe.id) AS recipes
+FROM cookbook
+LEFT JOIN chapter ON chapter.cookbook_id = cookbook.id
+LEFT JOIN recipe ON recipe.chapter_id = chapter.id
+GROUP BY cookbook.id
+ORDER BY cookbook.position, cookbook.created_at;
+
+selectChapters:
+SELECT * FROM chapter WHERE cookbook_id = ? ORDER BY position;
+
+fileRecipe:
+UPDATE recipe SET chapter_id = ?, updated_at = ? WHERE id = ?;
+
+defaultChapterOf:
+SELECT id FROM chapter WHERE cookbook_id = ? ORDER BY position LIMIT 1;
 
 -- Search. FTS4, not FTS5: Android's SQLite has no fts5 module. Diacritics are folded by
 -- unicode61, so "creme" finds "crème". See 3.sqm.

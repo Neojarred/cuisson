@@ -41,6 +41,9 @@ fun RecipeListScreen(
     total: Int,
     onOpen: (Recipe) -> Unit,
     onImport: () -> Unit,
+    title: String = "Recipes",
+    showSearch: Boolean = true,
+    importLabel: String = "Import",
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -54,7 +57,7 @@ fun RecipeListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Recipes", style = MaterialTheme.typography.displaySmall)
+                Text(title, style = MaterialTheme.typography.displaySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Button(
                     onClick = onImport,
                     shape = RoundedCornerShape(9.dp),
@@ -66,11 +69,13 @@ fun RecipeListScreen(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
                 ) {
-                    Text("Import", style = MaterialTheme.typography.titleMedium)
+                    Text(importLabel, style = MaterialTheme.typography.titleMedium)
                 }
             }
-            Spacer(Modifier.height(14.dp))
-            SearchField(query, onQueryChange)
+            if (showSearch) {
+                Spacer(Modifier.height(14.dp))
+                SearchField(query, onQueryChange)
+            }
             Spacer(Modifier.height(10.dp))
             Text(
                 text = when {

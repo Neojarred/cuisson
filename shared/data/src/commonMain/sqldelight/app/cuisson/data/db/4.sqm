@@ -1,0 +1,35 @@
+-- Version 4 to version 5.
+--
+-- Cookbooks and Chapters. A Recipe lives in exactly one Cookbook, in one of its Chapters.
+--
+-- Every Cookbook has a default Chapter with no name, created with it. That is what lets
+-- chapters be optional: a cookbook of six recipes needs none, and forcing someone to
+-- invent one before they can file anything is exactly the friction that stops people
+-- filing at all. The default chapter is only shown once a second one exists.
+--
+-- Unfiled is a Cookbook like any other, created here, and every existing recipe goes into
+-- it. Nothing is ever homeless, and nothing ever has to be filed.
+
+CREATE TABLE cookbook (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    name                TEXT    NOT NULL,
+    position            INTEGER NOT NULL,
+    created_at          INTEGER NOT NULL
+);
+
+CREATE TABLE chapter (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    cookbook_id         TEXT    NOT NULL,
+    name                TEXT    NOT NULL,
+    position            INTEGER NOT NULL
+);
+
+CREATE INDEX chapter_cookbook ON chapter(cookbook_id, position);
+
+ALTER TABLE recipe ADD COLUMN chapter_id TEXT;
+
+CREATE INDEX recipe_chapter ON recipe(chapter_id);
+
+INSERT INTO cookbook(id, name, position, created_at) VALUES ('unfiled', 'Unfiled', 0, 0);
+INSERT INTO chapter(id, cookbook_id, name, position) VALUES ('unfiled-ch', 'unfiled', '', 0);
+UPDATE recipe SET chapter_id = 'unfiled-ch';

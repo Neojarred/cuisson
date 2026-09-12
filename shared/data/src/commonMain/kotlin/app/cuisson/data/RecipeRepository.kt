@@ -7,6 +7,8 @@ import app.cuisson.data.db.Recipe as Recipe_
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import app.cuisson.domain.Chapter
+import app.cuisson.domain.Cookbook
 import app.cuisson.domain.Extraction
 import app.cuisson.domain.ExtractionTier
 import app.cuisson.domain.IngredientLine
@@ -76,6 +78,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
             notes = row.notes,
             sourceNotes = notesFor(id),
             imagePath = row.image_path,
+            chapterId = row.chapter_id,
             language = row.language,
             extraction = Extraction(
                 tier = row.extraction_tier.toTier(),
@@ -158,6 +161,9 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 total_minutes = recipe.timings.totalMinutes?.toLong(),
                 notes = recipe.notes,
                 image_path = recipe.imagePath,
+                // Nothing is ever homeless: a recipe nobody has filed goes into the
+                // default chapter of Unfiled.
+                chapter_id = recipe.chapterId ?: defaultChapterOf(Cookbook.UNFILED),
                 language = recipe.language,
                 extraction_tier = recipe.extraction.tier.name,
                 extraction_conf = recipe.extraction.confidence.toDouble(),
@@ -221,6 +227,55 @@ class RecipeRepository(private val database: CuissonDatabase) {
             .firstOrNull { sourceUrlKey(it.source_url) == key }
             ?.let { SavedSource(RecipeId(it.id), it.title) }
     }
+
+    fun observeCookbooks(): Flow<List<Cookbook>> =
+        queries.selectCookbooks()
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows ->
+                rows.map { Cookbook(it.id, it.name, it.recipes.toInt()) }
+            }
+
+    fun chaptersOf(cookbookId: String): List<Chapter> =
+        queries.selectChapters(cookbookId).executeAsList()
+            .map { Chapter(it.id, it.cookbook_id, it.name) }
+
+    fun defaultChapterOf(cookbookId: String): String? =
+        queries.defaultChapterOf(cookbookId).executeAsOneOrNull()
+
+    /** Creates a Cookbook together with the unnamed Chapter every Cookbook has. */
+    fun createCookbook(id: String, name: String, now: Long): Cookbook {
+        database.transaction {
+            val position = queries.selectCookbooks().executeAsList().size.toLong()
+            queries.insertCookbook(id, name.trim(), position, now)
+            queries.insertChapter("$id-ch", id, "", 0)
+        }
+        return Cookbook(id, name.trim(), 0)
+    }
+
+    fun addChapter(id: String, cookbookId: String, name: String) {
+        val position = queries.selectChapters(cookbookId).executeAsList().size.toLong()
+        queries.insertChapter(id, cookbookId, name.trim(), position)
+    }
+
+    fun renameCookbook(id: String, name: String) = queries.renameCookbook(name.trim(), id)
+
+    fun deleteCookbook(id: String) {
+        if (id == Cookbook.UNFILED) return
+        database.transaction {
+            // The recipes outlive the cookbook. Deleting a shelf is not deleting books.
+            val home = defaultChapterOf(Cookbook.UNFILED) ?: return@transaction
+            chaptersOf(id).forEach { chapter ->
+                queries.selectAllRecipes().executeAsList()
+                    .filter { it.chapter_id == chapter.id }
+                    .forEach { queries.fileRecipe(home, it.updated_at, it.id) }
+            }
+            queries.deleteCookbook(id)
+        }
+    }
+
+    fun fileRecipe(id: RecipeId, chapterId: String, now: Long) =
+        queries.fileRecipe(chapterId, now, id.value)
 
     fun setImagePath(id: RecipeId, path: String) {
         queries.setImagePath(path, id.value)

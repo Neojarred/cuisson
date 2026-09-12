@@ -22,6 +22,7 @@ data class Recipe(
     val notes: String?,
     val sourceNotes: List<SourceNote>,
     val imagePath: String?,
+    val chapterId: String?,
     val language: String,
     val extraction: Extraction,
     val createdAt: Instant,
