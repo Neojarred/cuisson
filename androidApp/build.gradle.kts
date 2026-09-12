@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.androidx.core.ktx)
+    implementation("androidx.collection:collection:1.5.0")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 

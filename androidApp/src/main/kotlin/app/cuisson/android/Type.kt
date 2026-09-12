@@ -15,9 +15,9 @@ import androidx.compose.ui.unit.sp
  * Cuisson has to look the same on a phone that has none.
  *
  * Fraunces carries the recipe titles. It is a serif with some warmth to it, and it is the
- * single thing that stops a list of recipes looking like a list of settings. Public Sans
- * does everything else and stays out of the way, because ingredients and method are read
- * while holding a knife.
+ * single thing that stops a list of recipes looking like a list of settings. Inter does
+ * everything else and stays out of the way, because ingredients and method are read while
+ * holding a knife.
  */
 private fun frauncesAt(weight: Int, soft: Float = 20f, wonk: Float = 1f) = Font(
     R.font.fraunces,
@@ -31,9 +31,12 @@ private fun frauncesAt(weight: Int, soft: Float = 20f, wonk: Float = 1f) = Font(
 )
 
 private fun sansAt(weight: Int) = Font(
-    R.font.public_sans,
+    R.font.inter,
     weight = FontWeight(weight),
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+    variationSettings = FontVariation.Settings(
+        FontVariation.weight(weight),
+        FontVariation.Setting("opsz", 16f),
+    ),
 )
 
 val Display = FontFamily(frauncesAt(400), frauncesAt(600), frauncesAt(700))
