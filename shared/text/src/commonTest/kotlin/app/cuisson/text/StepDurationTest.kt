@@ -38,6 +38,53 @@ class StepDurationTest {
         )
     }
 
+    /**
+     * All four were found by reading the timers a real import produced, not by thinking
+     * about the regex. The lentil soup had seven steps, four of which name a time, and
+     * only two of them offered a timer.
+     */
+    @Test
+    fun `the time can be a long way from the verb`() {
+        assertEquals(
+            5 * 60,
+            durationInStep(
+                "Once the oil is shimmering, add the chopped onion and carrot and cook, " +
+                    "stirring often, until the onion has softened and is turning " +
+                    "translucent, about 5 minutes."
+            ),
+        )
+    }
+
+    @Test
+    fun `five more minutes is five minutes`() {
+        assertEquals(
+            5 * 60,
+            durationInStep("Add the chopped greens and cook for 5 more minutes."),
+        )
+        assertEquals(
+            10 * 60,
+            durationInStep("Bake for a further 10 minutes until golden."),
+        )
+    }
+
+    @Test
+    fun `a range written in words is still set to its lower end`() {
+        // This one read the wrong end rather than missing: "5 to 10 minutes" gave ten.
+        assertEquals(5 * 60, durationInStep("Simmer for 5 to 10 minutes."))
+        assertEquals(20 * 60, durationInStep("Bake for 20 or 25 minutes."))
+        assertEquals(30 * 60, durationInStep("Laisser cuire 30 \u00e0 40 minutes."))
+    }
+
+    @Test
+    fun `a quantity before the time is not the time`() {
+        // The unit is what settles it: "4 large potatoes" has no unit of time after it,
+        // so the reading moves on to the number that does.
+        assertEquals(
+            20 * 60,
+            durationInStep("Cook 4 large potatoes until tender, about 20 minutes."),
+        )
+    }
+
     @Test
     fun `a measurement is not a duration`() {
         assertNull(durationInStep("Cut the beef into 4 cm cubes."))

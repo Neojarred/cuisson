@@ -49,10 +49,12 @@ fun CookbookScreen(
     onRenameChapter: (Chapter, String) -> Unit,
     onDeleteChapter: (Chapter) -> Unit,
     onRenameCookbook: (String) -> Unit,
+    onDeleteCookbook: () -> Unit,
     onBack: () -> Unit,
 ) {
     var namingChapter by remember { mutableStateOf(false) }
     var renamingCookbook by remember { mutableStateOf(false) }
+    var removingCookbook by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<Chapter?>(null) }
     var removing by remember { mutableStateOf<Chapter?>(null) }
 
@@ -145,12 +147,30 @@ fun CookbookScreen(
 
                 if (recipes.isEmpty()) {
                     item {
+                        Spacer(Modifier.height(22.dp))
                         Text(
                             text = "Nothing filed here yet. File a recipe from the recipe " +
                                 "itself, using File in.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                }
+                // Unfiled cannot go. It is where everything else falls back to.
+                if (!cookbook.isUnfiled) {
+                    item {
+                        Spacer(Modifier.height(36.dp))
+                        HorizontalDivider()
+                        TextButton(
+                            onClick = { removingCookbook = true },
+                            contentPadding = PaddingValues(vertical = 10.dp),
+                        ) {
+                            Text(
+                                text = "Delete this cookbook",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
                 item { Spacer(Modifier.height(60.dp)) }
@@ -189,6 +209,30 @@ fun CookbookScreen(
             onConfirm = { name ->
                 renamingCookbook = false
                 onRenameCookbook(name)
+            },
+        )
+    }
+
+    if (removingCookbook) {
+        AlertDialog(
+            onDismissRequest = { removingCookbook = false },
+            title = { Text("Delete ${cookbook.name}?") },
+            // Deleting a shelf is not deleting the books on it, and people expect the
+            // worst from a red button, so the dialog says which one this is.
+            text = {
+                Text(
+                    "The ${cookbook.recipeCount} recipes in it move to Unfiled. " +
+                        "Nothing is deleted."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    removingCookbook = false
+                    onDeleteCookbook()
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { removingCookbook = false }) { Text("Keep it") }
             },
         )
     }

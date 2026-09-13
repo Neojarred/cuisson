@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +48,13 @@ fun CookbooksScreen(
     var naming by remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(horizontal = 22.dp)) {
+        // Without this the title and the New button are drawn under the clock and the
+        // battery. Every other screen has it; this one was the exception nobody looked at.
+        Column(
+            modifier = Modifier
+                .safeDrawingPadding()
+                .padding(horizontal = 22.dp)
+        ) {
             Spacer(Modifier.height(20.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

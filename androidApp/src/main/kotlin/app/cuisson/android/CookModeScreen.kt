@@ -68,6 +68,9 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
         val ids = cards.map { it.timerId }.toSet()
         timers.filter { it.id in ids }
     }
+    // Not the one on the card in front of you. Showing it twice, the same number in two
+    // sizes, reads as two timers rather than one.
+    val elsewhere = mine.filterNot { it.id == cards.getOrNull(pager.currentPage)?.timerId }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding().fillMaxSize()) {
@@ -96,9 +99,9 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
             // Timers set on a step you have already walked past. Without this the only
             // way to find one is to page back looking for it, which at the hob is
             // exactly when you have no attention to spare.
-            if (mine.isNotEmpty()) {
+            if (elsewhere.isNotEmpty()) {
                 RunningStrip(
-                    timers = mine,
+                    timers = elsewhere,
                     onOpen = { id ->
                         cards.indexOfFirst { it.timerId == id }
                             .takeIf { it >= 0 }

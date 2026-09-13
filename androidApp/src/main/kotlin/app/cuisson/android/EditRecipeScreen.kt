@@ -160,7 +160,12 @@ fun EditRecipeScreen(
                         modifier = Modifier.width(110.dp),
                         numeric = true,
                     )
-                    Field(servingsUnit, { servingsUnit = it }, "Called", Modifier.weight(1f))
+                    Field(
+                        value = servingsUnit,
+                        onChange = { servingsUnit = it },
+                        label = "Called",
+                        modifier = Modifier.weight(1f),
+                    )
                     Field(
                         value = totalMinutes,
                         onChange = { totalMinutes = it.filter(Char::isDigit) },
@@ -179,7 +184,7 @@ fun EditRecipeScreen(
                     lines = ingredients,
                     index = index,
                     placeholder = "Ingredient",
-                    sectionPlaceholder = "Section, such as For the sauce",
+                    sectionable = true,
                 )
             }
 
@@ -195,7 +200,7 @@ fun EditRecipeScreen(
                     lines = steps,
                     index = index,
                     placeholder = "Step",
-                    sectionPlaceholder = null,
+                    sectionable = false,
                 )
             }
 
@@ -203,7 +208,12 @@ fun EditRecipeScreen(
                 AddRow("Add a step") { steps.add(EditableLine(null, "", "")) }
                 Spacer(Modifier.height(24.dp))
                 EditHeading("Your note")
-                Field(myNote, { myNote = it }, "Anything you want to remember", multiline = true)
+                Field(
+                    value = myNote,
+                    onChange = { myNote = it },
+                    placeholder = "Anything you want to remember",
+                    multiline = true,
+                )
                 if (recipe.sourceNotes.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -268,32 +278,45 @@ private data class EditableLine(
 private fun SnapshotStateList<EditableLine>.usable(): List<EditableLine> =
     filter { it.text.isNotBlank() }.map { it.copy(text = it.text.trim()) }
 
+/**
+ * One line, with its handles kept small.
+ *
+ * The section field is revealed rather than always drawn. A first attempt gave every
+ * ingredient a second box the same size as the first, and twenty ingredients became forty
+ * boxes of mostly empty placeholder text. Most lines belong to no section, so most lines
+ * should not have to say so.
+ */
 @Composable
 private fun LineEditor(
     line: EditableLine,
     lines: SnapshotStateList<EditableLine>,
     index: Int,
     placeholder: String,
-    sectionPlaceholder: String?,
+    sectionable: Boolean,
 ) {
-    Column(modifier = Modifier.padding(vertical = 2.dp)) {
+    var asked by remember { mutableStateOf(false) }
+    val showSection = sectionable && (asked || line.section.isNotBlank())
+
+    Column(modifier = Modifier.padding(bottom = 6.dp)) {
+        if (showSection) {
+            Field(
+                value = line.section,
+                onChange = { lines[index] = line.copy(section = it) },
+                placeholder = "Section, such as For the sauce",
+                small = true,
+            )
+        }
         Field(
             value = line.text,
             onChange = { lines[index] = line.copy(text = it) },
-            label = placeholder,
+            placeholder = placeholder,
             multiline = true,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            sectionPlaceholder?.let {
-                Field(
-                    value = line.section,
-                    onChange = { value -> lines[index] = line.copy(section = value) },
-                    label = it,
-                    modifier = Modifier.weight(1f),
-                    small = true,
-                )
+            if (sectionable) {
+                SmallAction("Section", enabled = !showSection) { asked = true }
             }
-            if (sectionPlaceholder == null) Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
             SmallAction("Up", enabled = index > 0) { lines.swap(index, index - 1) }
             SmallAction("Down", enabled = index < lines.lastIndex) { lines.swap(index, index + 1) }
             SmallAction("Remove") { lines.removeAt(index) }
@@ -355,11 +378,17 @@ private fun EditHeading(text: String) {
     Spacer(Modifier.height(8.dp))
 }
 
+/**
+ * A label sits above the box permanently; a placeholder disappears as soon as there is
+ * anything in it. The recipe's own details are worth labelling once. A list of twenty
+ * ingredients is not worth the word "Ingredient" twenty times.
+ */
 @Composable
 private fun Field(
     value: String,
     onChange: (String) -> Unit,
-    label: String,
+    label: String? = null,
+    placeholder: String? = null,
     modifier: Modifier = Modifier.fillMaxWidth(),
     multiline: Boolean = false,
     numeric: Boolean = false,
@@ -368,7 +397,17 @@ private fun Field(
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+        label = label?.let { { Text(it, style = MaterialTheme.typography.labelMedium) } },
+        placeholder = placeholder?.let {
+            {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        },
         singleLine = !multiline,
         textStyle = if (small) MaterialTheme.typography.bodyMedium
         else MaterialTheme.typography.bodyLarge,

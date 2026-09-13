@@ -50,7 +50,16 @@ private val CONTINUATION = Regex(
 private val WAITING = Regex(
     "(?:simmer|cook|bake|boil|roast|rest|prove|proof|chill|marinate|fry|saute|steam|" +
         "leave|stand|soak|reduce|braise|knead|infuse|mijoter|reposer|laisser|cuire)" +
-        "[^.!?]{0,60}?(\\d{1,3})(?:\\s*[-\u2013]\\s*\\d{1,3})?\\s*" +
-        "(hours?|hrs?|h|minutes?|mins?|min|seconds?|secs?|heures?)\\b",
+        // Ninety rather than sixty. "cook, stirring often, until the onion has softened
+        // and is turning translucent, about 5 minutes" puts seventy-eight characters
+        // between the verb and the time, and that sentence is not unusual.
+        "[^.!?]{0,90}?(\\d{1,3})" +
+        // A range, written with a dash or with a word. Only the first number is captured,
+        // so the lower end wins either way. Without the words, "5 to 10 minutes" skipped
+        // the five and timed the ten, which is the wrong end of the range.
+        "(?:(?:\\s*[-\u2013]\\s*|\\s+(?:to|or|ou|\u00e0)\\s+)\\d{1,3})?" +
+        // "5 more minutes" is still five minutes.
+        "(?:\\s+(?:more|additional|further|extra|longer))?" +
+        "\\s*(hours?|hrs?|h|minutes?|mins?|min|seconds?|secs?|heures?)\\b",
     RegexOption.IGNORE_CASE,
 )

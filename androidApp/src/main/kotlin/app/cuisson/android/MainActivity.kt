@@ -143,6 +143,12 @@ class MainActivity : ComponentActivity() {
                                     repository.renameCookbook(cookbook.id, name)
                                 }
                             },
+                            onDeleteCookbook = {
+                                openCookbook = null
+                                Cuisson.background.launch {
+                                    repository.deleteCookbook(cookbook.id)
+                                }
+                            },
                             onBack = { openCookbook = null },
                         )
                     }
