@@ -28,7 +28,11 @@ object Cuisson {
         val db = existing ?: CuissonDatabase(
             DatabaseDriverFactory(context.applicationContext).create()
         ).also { database = it }
-        return RecipeRepository(db)
+        val repository = RecipeRepository(db)
+        // Here rather than in MainActivity, because a share on a fresh install reaches
+        // ImportActivity first and would otherwise save a recipe with nowhere to live.
+        if (existing == null) repository.ensureUnfiled()
+        return repository
     }
 
     val importPipeline: ImportPipeline by lazy {

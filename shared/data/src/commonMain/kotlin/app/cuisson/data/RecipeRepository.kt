@@ -284,6 +284,10 @@ class RecipeRepository(private val database: CuissonDatabase) {
             ?.let { SavedSource(RecipeId(it.id), it.title) }
     }
 
+    fun cookbooks(): List<Cookbook> =
+        queries.selectCookbooks().executeAsList()
+            .map { Cookbook(it.id, it.name, it.recipes.toInt()) }
+
     fun observeCookbooks(): Flow<List<Cookbook>> =
         queries.selectCookbooks()
             .asFlow()
@@ -295,6 +299,58 @@ class RecipeRepository(private val database: CuissonDatabase) {
     fun chaptersOf(cookbookId: String): List<Chapter> =
         queries.selectChapters(cookbookId).executeAsList()
             .map { Chapter(it.id, it.cookbook_id, it.name) }
+
+    /**
+     * A cookbook's chapters, kept current, so one just added appears without leaving the
+     * screen and coming back.
+     */
+    fun observeChapters(cookbookId: String): Flow<List<Chapter>> =
+        queries.selectChapters(cookbookId)
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows -> rows.map { Chapter(it.id, it.cookbook_id, it.name) } }
+
+    fun renameChapter(id: String, name: String) = queries.renameChapter(name.trim(), id)
+
+    /**
+     * Removes a chapter and keeps what was in it.
+     *
+     * The recipes move to the cookbook's unnamed chapter rather than going with it. A
+     * chapter is a heading, and deleting a heading is not deleting what was under it.
+     */
+    fun deleteChapter(id: String, cookbookId: String) {
+        database.transaction {
+            val home = defaultChapterOf(cookbookId) ?: return@transaction
+            if (home == id) return@transaction
+            queries.recipesInChapter(id).executeAsList().forEach {
+                queries.fileRecipe(home, it.updated_at, it.id)
+            }
+            queries.deleteChapter(id)
+        }
+    }
+
+    /**
+     * Creates Unfiled on a database that has never had it.
+     *
+     * Migration 4 creates it for databases that predate cookbooks, and a schema created
+     * fresh at the current version runs no migrations, so a new install had no cookbooks
+     * at all: every recipe saved landed with no chapter, the Cookbooks tab was empty, and
+     * "File in" never appeared because there was nowhere to file. Nothing is ever
+     * homeless, and that has to be true on the first launch as well as the hundredth.
+     *
+     * The two halves are checked separately because a database can hold one without the
+     * other, and a cookbook with no chapter is a cookbook nothing can be put in.
+     */
+    fun ensureUnfiled() {
+        database.transaction {
+            if (queries.selectCookbooks().executeAsList().none { it.id == Cookbook.UNFILED }) {
+                queries.insertCookbook(Cookbook.UNFILED, "Unfiled", 0, 0)
+            }
+            if (queries.selectChapters(Cookbook.UNFILED).executeAsList().isEmpty()) {
+                queries.insertChapter("${Cookbook.UNFILED}-ch", Cookbook.UNFILED, "", 0)
+            }
+        }
+    }
 
     fun defaultChapterOf(cookbookId: String): String? =
         queries.defaultChapterOf(cookbookId).executeAsOneOrNull()

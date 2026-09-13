@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.cuisson.domain.IngredientLine
+import app.cuisson.domain.Chapter
 import app.cuisson.domain.Cookbook
 import app.cuisson.domain.Recipe
 import app.cuisson.domain.referencedNoteLabels
@@ -49,7 +50,8 @@ fun RecipeScreen(
     cookbooks: List<Cookbook> = emptyList(),
     cookCount: Int = 0,
     lastCooked: Long? = null,
-    onFile: (Cookbook) -> Unit = {},
+    chaptersOf: (Cookbook) -> List<Chapter> = { emptyList() },
+    onFile: (Chapter) -> Unit = {},
     onCook: () -> Unit = {},
     onEdit: () -> Unit = {},
 ) {
@@ -180,37 +182,77 @@ fun RecipeScreen(
     if (filing) {
         FilingDialog(
             cookbooks = cookbooks,
+            chaptersOf = chaptersOf,
             onPick = { onFile(it); filing = false },
             onDismiss = { filing = false },
         )
     }
 }
 
-/** Filing is one tap from the recipe, and never demanded at import. */
+/**
+ * Filing is one tap from the recipe, and never demanded at import.
+ *
+ * Picking a cookbook with no chapters of its own files the recipe straight away. Only a
+ * cookbook that has been divided asks the second question, which keeps the common case
+ * at one tap and stops chapters being something everybody has to think about.
+ */
 @Composable
 private fun FilingDialog(
     cookbooks: List<Cookbook>,
-    onPick: (Cookbook) -> Unit,
+    chaptersOf: (Cookbook) -> List<Chapter>,
+    onPick: (Chapter) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var chosen by remember { mutableStateOf<Cookbook?>(null) }
+    val book = chosen
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("File in", style = MaterialTheme.typography.headlineSmall) },
+        title = {
+            Text(
+                text = book?.name ?: "File in",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
         text = {
             Column {
-                cookbooks.forEach { cookbook ->
-                    Text(
-                        text = cookbook.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(cookbook) }
-                            .padding(vertical = 12.dp),
-                    )
+                if (book == null) {
+                    cookbooks.forEach { cookbook ->
+                        FilingRow(cookbook.name) {
+                            val chapters = chaptersOf(cookbook)
+                            if (chapters.any { !it.isDefault }) {
+                                chosen = cookbook
+                            } else {
+                                chapters.firstOrNull()?.let(onPick)
+                            }
+                        }
+                    }
+                } else {
+                    chaptersOf(book).forEach { chapter ->
+                        FilingRow(
+                            label = if (chapter.isDefault) "Not in a chapter" else chapter.name,
+                            onClick = { onPick(chapter) },
+                        )
+                    }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(onClick = { if (book == null) onDismiss() else chosen = null }) {
+                Text(if (book == null) "Cancel" else "Back")
+            }
+        },
+    )
+}
+
+@Composable
+private fun FilingRow(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
     )
 }
 

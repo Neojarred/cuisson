@@ -204,6 +204,17 @@ ORDER BY cookbook.position, cookbook.created_at;
 selectChapters:
 SELECT * FROM chapter WHERE cookbook_id = ? ORDER BY position;
 
+renameChapter:
+UPDATE chapter SET name = ? WHERE id = ?;
+
+-- The unnamed chapter every cookbook is created with cannot go: it is where recipes
+-- land when their own chapter is removed.
+deleteChapter:
+DELETE FROM chapter WHERE id = ? AND name != '';
+
+recipesInChapter:
+SELECT id, updated_at FROM recipe WHERE chapter_id = ?;
+
 fileRecipe:
 UPDATE recipe SET chapter_id = ?, updated_at = ? WHERE id = ?;
 

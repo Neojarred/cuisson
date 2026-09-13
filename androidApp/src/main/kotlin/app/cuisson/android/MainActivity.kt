@@ -91,15 +91,14 @@ class MainActivity : ComponentActivity() {
                         cookCount = record.count,
                         lastCooked = record.lastCooked,
                         cookbooks = shelf,
-                        onFile = { cookbook ->
+                        chaptersOf = { repository.chaptersOf(it.id) },
+                        onFile = { chapter ->
                             Cuisson.background.launch {
-                                repository.defaultChapterOf(cookbook.id)?.let { chapter ->
-                                    repository.fileRecipe(
-                                        open.id,
-                                        chapter,
-                                        System.currentTimeMillis(),
-                                    )
-                                }
+                                repository.fileRecipe(
+                                    open.id,
+                                    chapter.id,
+                                    System.currentTimeMillis(),
+                                )
                             }
                         },
                         onCook = { CookModeActivity.start(this@MainActivity, open.id) },
@@ -109,18 +108,42 @@ class MainActivity : ComponentActivity() {
                     }
 
                     openCookbook != null -> {
-                        val cookbook = openCookbook!!
-                        val chapters = repository.chaptersOf(cookbook.id).map { it.id }.toSet()
-                        RecipeListScreen(
-                            title = cookbook.name,
-                            recipes = library.filter { it.chapterId in chapters },
-                            query = "",
-                            onQueryChange = {},
-                            total = cookbook.recipeCount,
-                            showSearch = false,
+                        val cookbook = shelf.firstOrNull { it.id == openCookbook?.id }
+                            ?: openCookbook!!
+                        val chapters by remember(cookbook.id) {
+                            repository.observeChapters(cookbook.id)
+                        }.collectAsStateWithLifecycle(emptyList())
+                        val here = chapters.map { it.id }.toSet()
+                        CookbookScreen(
+                            cookbook = cookbook,
+                            chapters = chapters,
+                            recipes = library.filter { it.chapterId in here },
                             onOpen = { openId = it.id },
-                            onImport = { openCookbook = null },
-                            importLabel = "Back",
+                            onAddChapter = { name ->
+                                Cuisson.background.launch {
+                                    repository.addChapter(
+                                        UUID.randomUUID().toString(),
+                                        cookbook.id,
+                                        name,
+                                    )
+                                }
+                            },
+                            onRenameChapter = { chapter, name ->
+                                Cuisson.background.launch {
+                                    repository.renameChapter(chapter.id, name)
+                                }
+                            },
+                            onDeleteChapter = { chapter ->
+                                Cuisson.background.launch {
+                                    repository.deleteChapter(chapter.id, cookbook.id)
+                                }
+                            },
+                            onRenameCookbook = { name ->
+                                Cuisson.background.launch {
+                                    repository.renameCookbook(cookbook.id, name)
+                                }
+                            },
+                            onBack = { openCookbook = null },
                         )
                     }
 
