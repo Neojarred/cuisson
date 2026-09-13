@@ -38,6 +38,9 @@ CREATE TABLE ingredient_line (
     recipe_id           TEXT    NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
     position            INTEGER NOT NULL,
     raw_text            TEXT    NOT NULL,
+    -- The user's own wording for this line, shown in front of raw_text and removable.
+    -- Never written over raw_text: the phase 4 parser has to read what the site wrote.
+    amendment           TEXT,
     group_label         TEXT,
     quantity_min        REAL,
     quantity_max        REAL,
@@ -59,6 +62,8 @@ CREATE TABLE step (
     recipe_id           TEXT    NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
     position            INTEGER NOT NULL,
     text                TEXT    NOT NULL,
+    -- As above: the user's wording for this step, beside the author's rather than over it.
+    amendment           TEXT,
     duration_seconds    INTEGER,
     -- Pointers the source made to material we did not capture, such as "see Note 3".
     unresolved_refs     TEXT
@@ -90,15 +95,33 @@ UPDATE recipe SET image_path = ? WHERE id = ?;
 
 insertIngredientLine:
 INSERT OR REPLACE INTO ingredient_line(
-    id, recipe_id, position, raw_text, group_label,
+    id, recipe_id, position, raw_text, amendment, group_label,
     quantity_min, quantity_max, unit_canonical, unit_system,
     unit_alt_canonical, unit_alt_system, item_text, preparation,
     optional, canonical_item_id, parse_confidence
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 insertStep:
-INSERT OR REPLACE INTO step(id, recipe_id, position, text, duration_seconds, unresolved_refs)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO step(
+    id, recipe_id, position, text, amendment, duration_seconds, unresolved_refs
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Saving an edited recipe replaces its lines rather than merging them, or a line the
+-- user deleted would survive its own deletion.
+deleteIngredientsOf:
+DELETE FROM ingredient_line WHERE recipe_id = ?;
+
+deleteStepsOf:
+DELETE FROM step WHERE recipe_id = ?;
+
+deleteNotesOf:
+DELETE FROM source_note WHERE recipe_id = ?;
+
+deleteCookEntriesOf:
+DELETE FROM cook_entry WHERE recipe_id = ?;
+
+deleteRecipe:
+DELETE FROM recipe WHERE id = ?;
 
 selectAllRecipes:
 SELECT * FROM recipe ORDER BY updated_at DESC;
@@ -112,11 +135,13 @@ SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 setStepDuration:
 UPDATE step SET duration_seconds = ? WHERE id = ?;
 
+-- coalesce, not text: a step the user rewrote states its own time, and re-reading the
+-- author's wording would quietly undo the change on the next launch.
 selectAllSteps:
-SELECT id, text FROM step;
+SELECT id, coalesce(amendment, text) AS text FROM step;
 
 stepsWithoutDuration:
-SELECT id, text FROM step WHERE duration_seconds IS NULL;
+SELECT id, coalesce(amendment, text) AS text FROM step WHERE duration_seconds IS NULL;
 
 selectStepsForRecipe:
 SELECT * FROM step WHERE recipe_id = ? ORDER BY position;

@@ -98,6 +98,52 @@ class MigrationTest {
         )
     }
 
+    /**
+     * Version 7 adds the amendment columns. A migration that forgets one of them does not
+     * fail here at the ALTER, it fails on the first screen that reads the column, which on
+     * a phone is every screen.
+     */
+    @Test
+    fun `a version 1 database gains somewhere to keep an edit`() {
+        val driver = driver()
+        version1.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+            driver.execute(null, "$it;", 0)
+        }
+        driver.execute(
+            null,
+            """
+            INSERT INTO recipe (id, title, source_kind, extraction_tier, created_at, updated_at)
+            VALUES ('r', 'Daube', 'WEB', 'STRUCTURED', 1, 1);
+            """.trimIndent(),
+            0,
+        )
+        driver.execute(
+            null,
+            """
+            INSERT INTO ingredient_line (id, recipe_id, position, raw_text)
+            VALUES ('r-i0', 'r', 0, '2 onions');
+            """.trimIndent(),
+            0,
+        )
+        driver.execute(
+            null,
+            """
+            INSERT INTO step (id, recipe_id, position, text)
+            VALUES ('r-s0', 'r', 0, 'Brown the beef.');
+            """.trimIndent(),
+            0,
+        )
+
+        CuissonDatabase.Schema.migrate(driver, 1L, CuissonDatabase.Schema.version)
+
+        val repository = RecipeRepository(CuissonDatabase(driver))
+        val line = repository.ingredientsFor(app.cuisson.domain.RecipeId("r")).single()
+        assertEquals("2 onions", line.rawText)
+        assertEquals(null, line.amendment, "nothing was edited, so nothing is amended")
+        assertEquals("2 onions", line.text)
+        assertEquals(null, repository.stepsFor(app.cuisson.domain.RecipeId("r")).single().amendment)
+    }
+
     @Test
     fun `a fresh database is created at the current version and is queryable`() {
         val driver = driver()

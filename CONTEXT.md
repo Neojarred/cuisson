@@ -19,6 +19,12 @@ The exact text a recipe arrived as, kept forever and never edited by Cuisson. Ev
 parsed is an overlay on top of it.
 _Avoid_: original, source text, raw data
 
+**Amendment**:
+A change the user made to a line of an imported Recipe, kept beside the Raw Text it
+stands in front of rather than instead of it. Always removable, so any Recipe can still be
+read exactly as its publisher wrote it.
+_Avoid_: correction (means an ingredient resolution here), edit, override, revision
+
 **Ingredient Line**:
 One line of a recipe's ingredient list, holding both its raw text and whatever the parser
 managed to pull out of it.

@@ -26,7 +26,7 @@ data class SourceNote(
  * front of someone, and the rest can wait behind a tap.
  */
 fun Recipe.referencedNoteLabels(): Set<String> {
-    val text = ingredients.map { it.rawText } + steps.map { it.text }
+    val text = ingredients.map { it.text } + steps.map { it.text }
     return text.flatMap { NOTE_REFERENCE.findAll(it).map { m -> m.groupValues[1].lowercase() } }
         .toSet()
 }

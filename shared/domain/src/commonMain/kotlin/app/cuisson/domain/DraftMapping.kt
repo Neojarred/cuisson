@@ -36,7 +36,7 @@ fun DraftRecipe.toRecipe(id: String, now: Instant): Recipe = Recipe(
         Step(
             id = "$id-s$index",
             position = index,
-            text = step.text,
+            sourceText = step.text,
             durationSeconds = step.durationSeconds,
             references = referencesIn(step.text),
         )

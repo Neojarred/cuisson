@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private var query by mutableStateOf("")
     private var tab by mutableStateOf(Tab.Recipes)
     private var openCookbook by mutableStateOf<Cookbook?>(null)
+    private var editing by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +47,10 @@ class MainActivity : ComponentActivity() {
             // The duration reading changed, so every step is read again once.
             repository.backfillStepDurations(all = true)
         }
+
+        // Alarms do not survive a reboot, so a timer set before one would count down and
+        // then say nothing. Anything still due is armed again here.
+        KitchenTimer.revive(applicationContext)
 
         setContent {
             CuissonTheme {
@@ -64,6 +69,20 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when {
+                    open != null && editing -> EditRecipeScreen(
+                        recipe = open,
+                        onSave = { edited ->
+                            repository.replace(edited)
+                            editing = false
+                        },
+                        onDelete = {
+                            repository.delete(open.id)
+                            editing = false
+                            openId = null
+                        },
+                        onCancel = { editing = false },
+                    )
+
                     open != null -> {
                         val record by remember(open.id) { repository.observeCookRecord(open.id) }
                             .collectAsStateWithLifecycle(CookRecord(0, null))
@@ -84,6 +103,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onCook = { CookModeActivity.start(this@MainActivity, open.id) },
+                        onEdit = { editing = true },
                         onBack = { openId = null },
                         )
                     }

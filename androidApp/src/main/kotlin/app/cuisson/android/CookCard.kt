@@ -21,6 +21,13 @@ data class CookCard(
     val text: String,
     val durationSeconds: Int?,
     val notes: List<SourceNote>,
+    /**
+     * What a timer started from this card is called.
+     *
+     * Derived from the step's own id rather than its position, so a timer survives the
+     * process that started it and still points at the right step afterwards.
+     */
+    val timerId: String,
 ) {
     val isWholeStep: Boolean get() = partsInStep == 1
 }
@@ -42,6 +49,7 @@ fun cookCardsFor(recipe: Recipe, splitLongSteps: Boolean = true): List<CookCard>
                 // not to all of them: a step split into four should not offer four timers.
                 durationSeconds = step.durationSeconds?.takeIf { mentionsTime(text) },
                 notes = referencedIn(text).mapNotNull(notesByLabel::get),
+                timerId = "${step.id}-$part",
             )
         }
     }

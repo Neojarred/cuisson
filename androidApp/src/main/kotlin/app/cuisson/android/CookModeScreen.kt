@@ -1,5 +1,11 @@
 package app.cuisson.android
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,13 +19,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -28,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -54,6 +62,12 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
     val pager = rememberPagerState { cards.size }
     var showIngredients by remember { mutableStateOf(false) }
     val ticked = remember { mutableStateMapOf<String, Boolean>() }
+
+    val timers = runningTimers()
+    val mine = remember(timers, cards) {
+        val ids = cards.map { it.timerId }.toSet()
+        timers.filter { it.id in ids }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding().fillMaxSize()) {
@@ -79,8 +93,27 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
                 }
             }
 
+            // Timers set on a step you have already walked past. Without this the only
+            // way to find one is to page back looking for it, which at the hob is
+            // exactly when you have no attention to spare.
+            if (mine.isNotEmpty()) {
+                RunningStrip(
+                    timers = mine,
+                    onOpen = { id ->
+                        cards.indexOfFirst { it.timerId == id }
+                            .takeIf { it >= 0 }
+                            ?.let { pager.requestScrollToPage(it) }
+                    },
+                )
+            }
+
             HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
-                CookCardView(cards[page])
+                val card = cards[page]
+                CookCardView(
+                    card = card,
+                    label = "${recipe.title}, step ${card.stepNumber}",
+                    running = mine.firstOrNull { it.id == card.timerId },
+                )
             }
 
             Row(
@@ -126,7 +159,7 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
                         Spacer(Modifier.height(4.dp))
                     }
                     Text(
-                        text = line.rawText,
+                        text = line.text,
                         style = MaterialTheme.typography.bodyLarge,
                         textDecoration = if (done) TextDecoration.LineThrough else null,
                         color = if (done) MaterialTheme.colorScheme.onSurfaceVariant
@@ -142,8 +175,56 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
     }
 }
 
+/**
+ * Every timer currently running, re-read once a second.
+ *
+ * Polling rather than observing, because the truth is a moment written to disk that
+ * another process may have changed. A second of lag on a screen that is already awake
+ * costs nothing, and this way the display cannot drift away from what will actually
+ * happen.
+ */
 @Composable
-private fun CookCardView(card: CookCard) {
+private fun runningTimers(): List<KitchenTimer.Running> {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            tick++
+        }
+    }
+    return remember(tick) { KitchenTimer.all(context) }
+}
+
+@Composable
+private fun RunningStrip(timers: List<KitchenTimer.Running>, onOpen: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        timers.take(3).forEach { timer ->
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .clickable { onOpen(timer.id) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = clock(remainingOf(timer)),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CookCardView(card: CookCard, label: String, running: KitchenTimer.Running?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -163,9 +244,9 @@ private fun CookCardView(card: CookCard) {
             text = card.text,
             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 23.sp, lineHeight = 34.sp),
         )
-        card.durationSeconds?.let {
+        card.durationSeconds?.let { seconds ->
             Spacer(Modifier.height(22.dp))
-            Timer(it)
+            Timer(id = card.timerId, seconds = seconds, label = label, running = running)
         }
         card.notes.forEach { note ->
             Spacer(Modifier.height(18.dp))
@@ -201,46 +282,79 @@ private fun NoteCard(note: app.cuisson.domain.SourceNote) {
 }
 
 /**
- * Counts down in the app while it is open. It does not yet survive leaving the app, which
- * needs a foreground service and is still to come.
+ * A timer that outlives the screen it was started from.
+ *
+ * Nothing counts down here. [running] is the moment the alarm will fire, so the number on
+ * screen is derived from the clock and is right however long the app was away.
  */
 @Composable
-private fun Timer(seconds: Int) {
-    var remaining by remember(seconds) { mutableStateOf(seconds) }
-    var running by remember(seconds) { mutableStateOf(false) }
+private fun Timer(id: String, seconds: Int, label: String, running: KitchenTimer.Running?) {
+    val context = LocalContext.current
+    var lateWarning by remember { mutableStateOf(false) }
 
-    LaunchedEffect(running, remaining) {
-        if (running && remaining > 0) {
-            delay(1000)
-            remaining--
-        }
-    }
+    // Asked for at the moment a timer is started rather than at launch, because that is
+    // the first point at which a notification is something the user wants.
+    val askForNotifications = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = if (remaining >= 3600) {
-                "%d:%02d:%02d".format(remaining / 3600, (remaining % 3600) / 60, remaining % 60)
-            } else {
-                "%d:%02d".format(remaining / 60, remaining % 60)
-            },
-            style = MaterialTheme.typography.displaySmall,
-            color = if (remaining == 0) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(0.dp))
-        TextButton(onClick = {
-            if (remaining == 0) remaining = seconds else running = !running
-        }) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = when {
-                    remaining == 0 -> "Again"
-                    running -> "Pause"
-                    else -> "Start"
+                text = clock(running?.let(::remainingOf) ?: seconds),
+                style = MaterialTheme.typography.displaySmall,
+                color = if (running != null) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.width(12.dp))
+            TextButton(onClick = {
+                if (running != null) {
+                    KitchenTimer.cancel(context, id)
+                } else {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        askForNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    lateWarning = !KitchenTimer.start(context, id, label, seconds)
+                }
+            }) {
+                Text(
+                    text = if (running != null) "Stop" else "Start",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+
+        // Only after a timer has actually been set inexactly. Warning about it in advance
+        // would be asking for a permission before there is anything to spend it on.
+        if (lateWarning) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Android may hold this back by a few minutes. Allow exact alarms",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.clickable {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                        )
+                    }
                 },
-                style = MaterialTheme.typography.labelLarge,
             )
         }
     }
+}
+
+private fun remainingOf(timer: KitchenTimer.Running): Int =
+    ((timer.endsAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0).toInt()
+
+/**
+ * A range gives its lower end deliberately, so "30 to 40 minutes" starts at thirty, which
+ * is when you check. An hour is written out in full rather than as sixty minutes.
+ */
+private fun clock(seconds: Int): String = if (seconds >= 3600) {
+    "%d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
+} else {
+    "%d:%02d".format(seconds / 60, seconds % 60)
 }
 
 @Composable

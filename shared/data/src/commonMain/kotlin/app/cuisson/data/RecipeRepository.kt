@@ -141,7 +141,11 @@ class RecipeRepository(private val database: CuissonDatabase) {
         queries.deleteSearchRow(recipe.id.value)
         queries.insertSearchRow(
             title = listOfNotNull(recipe.title, recipe.rawTitle).joinToString(" "),
-            ingredients = recipe.ingredients.joinToString(" ") { it.rawText },
+            // Both wordings, so a line renamed from "scallions" to "spring onions" is
+            // still found by either.
+            ingredients = recipe.ingredients
+                .flatMap { listOfNotNull(it.rawText, it.amendment) }
+                .joinToString(" "),
             notes = listOfNotNull(
                 recipe.notes,
                 recipe.sourceNotes.joinToString(" ") { it.text }.takeIf { it.isNotBlank() },
@@ -183,6 +187,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
                     recipe_id = recipe.id.value,
                     position = line.position.toLong(),
                     raw_text = line.rawText,
+                    amendment = line.amendment,
                     group_label = line.groupLabel,
                     quantity_min = line.quantity?.min,
                     quantity_max = line.quantity?.max,
@@ -211,13 +216,58 @@ class RecipeRepository(private val database: CuissonDatabase) {
                     id = step.id,
                     recipe_id = recipe.id.value,
                     position = step.position.toLong(),
-                    text = step.text,
-                    duration_seconds = step.durationSeconds?.toLong(),
+                    text = step.sourceText,
+                    amendment = step.amendment,
+                    // Read here as well as at import, so no path can produce a recipe
+                    // whose steps have no timers. A step that already carries one keeps
+                    // it: the extractor may have read a duration this cannot see.
+                    duration_seconds = (step.durationSeconds ?: durationInStep(step.text))
+                        ?.toLong(),
                     unresolved_refs = step.references
                         .takeIf { it.isNotEmpty() }
                         ?.joinToString(REF_SEPARATOR),
                 )
             }
+        }
+    }
+
+    /**
+     * Writes an edited recipe over the one already stored.
+     *
+     * [save] alone is not enough: it inserts or replaces each line by id, so a line the
+     * user deleted would sit there untouched, having survived its own deletion. The old
+     * lines go first and the new set is written whole.
+     *
+     * Durations are read again from every step as it goes in. A step someone rewrote from
+     * twenty minutes to twenty-five has to offer the timer they meant, and the reading is
+     * cheap enough to do for all of them rather than guess which ones changed.
+     */
+    fun replace(recipe: Recipe) {
+        // Cleared rather than kept, because save fills in only what is missing and an
+        // edited step needs its old reading thrown away before the new one is taken.
+        val timed = recipe.copy(steps = recipe.steps.map { it.copy(durationSeconds = null) })
+        database.transaction {
+            queries.deleteIngredientsOf(recipe.id.value)
+            queries.deleteStepsOf(recipe.id.value)
+            save(timed)
+        }
+    }
+
+    /**
+     * Removes a recipe and everything hanging off it.
+     *
+     * Written out rather than left to ON DELETE CASCADE, because SQLite enforces foreign
+     * keys only when the connection asks it to and Android's driver does not by default.
+     * A cascade that silently does nothing leaves orphan rows nobody ever looks at again.
+     */
+    fun delete(id: RecipeId) {
+        database.transaction {
+            runCatching { queries.deleteSearchRow(id.value) }
+            queries.deleteIngredientsOf(id.value)
+            queries.deleteStepsOf(id.value)
+            queries.deleteNotesOf(id.value)
+            queries.deleteCookEntriesOf(id.value)
+            queries.deleteRecipe(id.value)
         }
     }
 
@@ -341,6 +391,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 id = row.id,
                 position = row.position.toInt(),
                 rawText = row.raw_text,
+                amendment = row.amendment,
                 groupLabel = row.group_label,
                 quantity = row.quantity_min?.let {
                     QuantityRange(it, row.quantity_max ?: it)
@@ -372,7 +423,8 @@ class RecipeRepository(private val database: CuissonDatabase) {
             Step(
                 id = row.id,
                 position = row.position.toInt(),
-                text = row.text,
+                sourceText = row.text,
+                amendment = row.amendment,
                 durationSeconds = row.duration_seconds?.toInt(),
                 references = row.unresolved_refs
                     ?.split(REF_SEPARATOR)

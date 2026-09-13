@@ -3,6 +3,17 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        Timers. SCHEDULE_EXACT_ALARM rather than USE_EXACT_ALARM: the second is granted
+        automatically and cannot be revoked, and Play restricts it to apps whose core
+        function is an alarm clock or a calendar. This is a recipe app. So the user is
+        asked once, in settings, and a timer set without it still fires, just not
+        necessarily on the minute. Cuisson says so rather than pretending otherwise.
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
@@ -39,6 +50,15 @@
             android:name=".CookModeActivity"
             android:exported="false"
             android:label="@string/app_name" />
+
+        <!-- Where a timer reaching zero lands, with Cuisson closed. -->
+        <receiver
+            android:name=".TimerAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.cuisson.TIMER" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

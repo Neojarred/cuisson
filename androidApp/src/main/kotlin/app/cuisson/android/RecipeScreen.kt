@@ -38,7 +38,7 @@ import app.cuisson.domain.referencedNoteLabels
 import app.cuisson.domain.Step
 
 /**
- * Ingredient lines are rendered from [IngredientLine.rawText], never rebuilt from the
+ * Ingredient lines are rendered from [IngredientLine.text], never rebuilt from the
  * parsed quantity and unit. Rebuilding is how "5 garlic cloves" turns into
  * "5 clove garlic". See docs/adr/0004.
  */
@@ -51,6 +51,7 @@ fun RecipeScreen(
     lastCooked: Long? = null,
     onFile: (Cookbook) -> Unit = {},
     onCook: () -> Unit = {},
+    onEdit: () -> Unit = {},
 ) {
     var filing by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
@@ -70,6 +71,9 @@ fun RecipeScreen(
                         Text("Back", style = MaterialTheme.typography.labelLarge)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
+                            Text("Edit", style = MaterialTheme.typography.labelLarge)
+                        }
                         if (cookbooks.isNotEmpty()) {
                             TextButton(
                                 onClick = { filing = true },
@@ -172,6 +176,14 @@ fun RecipeScreen(
             item { Spacer(Modifier.height(48.dp)) }
         }
     }
+
+    if (filing) {
+        FilingDialog(
+            cookbooks = cookbooks,
+            onPick = { onFile(it); filing = false },
+            onDismiss = { filing = false },
+        )
+    }
 }
 
 /** Filing is one tap from the recipe, and never demanded at import. */
@@ -236,10 +248,18 @@ private fun IngredientRow(line: IngredientLine) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = line.rawText,
+            text = line.text,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
+        if (line.isAmended) {
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "edited",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (line.optional) {
             Spacer(Modifier.width(6.dp))
             Text(

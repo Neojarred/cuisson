@@ -1,0 +1,12 @@
+-- Version 6 to version 7.
+--
+-- Amendments: the user's own wording for a line they disagreed with.
+--
+-- A separate column rather than a rewrite of raw_text. Editing in place would destroy the
+-- publisher's words, which is what ADR-0004 exists to prevent, and would take the phase 4
+-- ingredient parser's input with them: the parser has to read what the site wrote, not
+-- what the reader typed over it. Keeping both also makes an edit undoable, which matters
+-- most on the line somebody fixed at the hob with one hand.
+
+ALTER TABLE ingredient_line ADD COLUMN amendment TEXT;
+ALTER TABLE step ADD COLUMN amendment TEXT;

@@ -3,9 +3,13 @@ package app.cuisson.domain
 /**
  * One line of an ingredient list.
  *
- * [rawText] is what the source actually said and is never modified. Everything else is
- * the parser's reading of it, and any of it may be absent. The interface displays
- * [rawText]; the parsed fields drive scaling and the shopping list.
+ * [rawText] is what the source actually said and is never modified. [amendment] is the
+ * user's wording where they disagreed with it, kept beside the original rather than over
+ * it, so an edit can be taken back and the phase 4 parser still has the line the site
+ * published. See ADR-0004.
+ *
+ * Everything else is the parser's reading of the line, and any of it may be absent. The
+ * interface displays [text]; the parsed fields drive scaling and the shopping list.
  *
  * Re-rendering a line from the parsed pieces is how "5 garlic cloves" becomes
  * "5 clove garlic". Don't.
@@ -14,6 +18,7 @@ data class IngredientLine(
     val id: String,
     val position: Int,
     val rawText: String,
+    val amendment: String? = null,
     val groupLabel: String? = null,
     val quantity: QuantityRange? = null,
     val unit: MeasureUnit? = null,
@@ -22,7 +27,12 @@ data class IngredientLine(
     val optional: Boolean = false,
     val canonicalItemId: String? = null,
     val parseConfidence: Float = 0f,
-)
+) {
+    /** The line as the reader should see it: their wording if they gave one. */
+    val text: String get() = amendment ?: rawText
+
+    val isAmended: Boolean get() = amendment != null
+}
 
 /**
  * A quantity, which may be a range. "2 to 3 onions" is a range; "2 onions" is a range
