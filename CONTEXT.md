@@ -40,6 +40,22 @@ A written form that resolves to a Canonical Ingredient, either shipped with the 
 learned from a correction the user made.
 _Avoid_: synonym, mapping
 
+**Family**:
+The more general Canonical Ingredient another one is a kind of. Onion is the Family of red
+onion. Something made from an ingredient is not a kind of it, so tomato purée has no
+Family in tomato.
+_Avoid_: parent, type, class, category
+
+**Form**:
+Whether an ingredient is fresh, dried, frozen, canned or ground. Two Forms of the same
+thing are two different things to buy.
+_Avoid_: type, variant, state
+
+**Learned Ingredient**:
+A Canonical Ingredient Cuisson created itself, from a line nothing it ships with could
+match, instead of merging that line into its nearest guess.
+_Avoid_: custom ingredient, user ingredient, unknown ingredient
+
 **Step**:
 One instruction in a recipe's method, optionally carrying a duration that becomes a timer.
 _Avoid_: instruction, direction
@@ -173,9 +189,20 @@ added at, and that can be changed from the list.
 _Avoid_: scaling factor, portions, multiplier
 
 **Consolidation**:
-Merging the same Canonical Ingredient across several recipes into one Shopping Item,
-always able to show which recipes contributed what.
+Merging the same Canonical Ingredient across the recipes on a Shopping List, and the
+user's own additions, into one Shopping Item that can always show each Contribution.
+Ingredients that share only a Family are never merged.
 _Avoid_: merging, deduplication, aggregation
+
+**Contribution**:
+One share of a Shopping Item: what one recipe on the list asks for, or what the user added
+themselves.
+_Avoid_: source, portion, line
+
+**Aisle**:
+The section of a shop a Shopping Item is found in, such as crèmerie or conserves. Follows
+where a thing sits on the shelf, not what it is.
+_Avoid_: category, department, section
 
 **Cook Mode**:
 The full-screen, screen-awake view used while actually cooking.

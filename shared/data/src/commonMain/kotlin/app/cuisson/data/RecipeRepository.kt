@@ -64,6 +64,9 @@ class RecipeRepository(private val database: CuissonDatabase) {
 
     fun all(): List<Recipe> = queries.selectAllRecipes().executeAsList().map(::toRecipe)
 
+    fun find(id: RecipeId): Recipe? =
+        queries.selectRecipeById(id.value).executeAsOneOrNull()?.let(::toRecipe)
+
     private fun toRecipe(row: Recipe_): Recipe {
         val id = RecipeId(row.id)
         return Recipe(
@@ -252,6 +255,8 @@ class RecipeRepository(private val database: CuissonDatabase) {
             queries.deleteIngredientsOf(recipe.id.value)
             queries.deleteStepsOf(recipe.id.value)
             save(timed)
+            // A list holding this recipe has just changed underneath its ticks.
+            database.shoppingQueries.clearTicksForRecipe(recipe.id.value)
         }
     }
 
@@ -269,6 +274,9 @@ class RecipeRepository(private val database: CuissonDatabase) {
             queries.deleteStepsOf(id.value)
             queries.deleteNotesOf(id.value)
             queries.deleteCookEntriesOf(id.value)
+            // Off every shopping list too, and everything it asked for goes with it.
+            database.shoppingQueries.clearTicksForRecipe(id.value)
+            database.shoppingQueries.removeRecipeFromAllLists(id.value)
             queries.deleteRecipe(id.value)
         }
     }

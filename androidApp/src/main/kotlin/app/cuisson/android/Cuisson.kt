@@ -3,6 +3,7 @@ package app.cuisson.android
 import android.content.Context
 import app.cuisson.data.DatabaseDriverFactory
 import app.cuisson.data.RecipeRepository
+import app.cuisson.data.ShoppingRepository
 import app.cuisson.data.db.CuissonDatabase
 import app.cuisson.importer.ImportPipeline
 import app.cuisson.importer.RecipeFetcher
@@ -33,6 +34,11 @@ object Cuisson {
         // ImportActivity first and would otherwise save a recipe with nowhere to live.
         if (existing == null) repository.ensureUnfiled()
         return repository
+    }
+
+    fun shopping(context: Context): ShoppingRepository {
+        val recipes = repository(context)
+        return ShoppingRepository(database!!, recipes)
     }
 
     val importPipeline: ImportPipeline by lazy {

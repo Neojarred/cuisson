@@ -1,0 +1,164 @@
+-- Shopping Lists. See 7.sqm.
+--
+-- No shopping item is stored. A list holds the recipes on it, the servings for each, and
+-- the lines the user added themselves, and the items are worked out from those whenever
+-- the list is read. That is what makes "last change wins" true without any bookkeeping:
+-- change a recipe or its servings and the list follows, remove a recipe and everything it
+-- asked for goes with it.
+
+CREATE TABLE shopping_list (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    name                TEXT    NOT NULL,
+    created_at          INTEGER NOT NULL,
+    last_used_at        INTEGER NOT NULL,
+    -- Set when the list is archived. An Archived List is the same list, resting.
+    archived_at         INTEGER
+);
+
+-- One row per recipe per list. Adding the same recipe again updates its servings.
+CREATE TABLE shopping_list_recipe (
+    list_id             TEXT    NOT NULL,
+    recipe_id           TEXT    NOT NULL,
+    servings            REAL,
+    added_at            INTEGER NOT NULL,
+    PRIMARY KEY (list_id, recipe_id)
+);
+
+-- Lines the user wrote themselves. They merge with a recipe's lines for the same
+-- ingredient, and no change to a recipe ever removes them.
+CREATE TABLE shopping_own_item (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    list_id             TEXT    NOT NULL,
+    text                TEXT    NOT NULL,
+    added_at            INTEGER NOT NULL
+);
+
+-- Cleared whenever what the list holds changes. A list is built, then shopped.
+CREATE TABLE shopping_tick (
+    list_id             TEXT    NOT NULL,
+    item_key            TEXT    NOT NULL,
+    PRIMARY KEY (list_id, item_key)
+);
+
+-- An amount the user typed over the computed one. basis is the computed amount it was
+-- typed over, so a later change to that item can be seen and the typed figure dropped.
+CREATE TABLE shopping_override (
+    list_id             TEXT    NOT NULL,
+    item_key            TEXT    NOT NULL,
+    amount              TEXT    NOT NULL,
+    basis               TEXT    NOT NULL,
+    PRIMARY KEY (list_id, item_key)
+);
+
+-- Corrections, remembered on this phone and applied to every recipe from then on.
+CREATE TABLE ingredient_alias (
+    alias_key           TEXT    NOT NULL PRIMARY KEY,
+    canonical_id        TEXT    NOT NULL,
+    created_at          INTEGER NOT NULL
+);
+
+CREATE TABLE ingredient_aisle (
+    canonical_id        TEXT    NOT NULL PRIMARY KEY,
+    aisle               TEXT    NOT NULL
+);
+
+selectLists:
+SELECT shopping_list.*,
+    (SELECT count(*) FROM shopping_list_recipe WHERE list_id = shopping_list.id) AS recipes
+FROM shopping_list
+ORDER BY archived_at IS NOT NULL, last_used_at DESC;
+
+selectList:
+SELECT * FROM shopping_list WHERE id = ?;
+
+insertList:
+INSERT INTO shopping_list(id, name, created_at, last_used_at, archived_at)
+VALUES (?, ?, ?, ?, NULL);
+
+renameList:
+UPDATE shopping_list SET name = ? WHERE id = ?;
+
+touchList:
+UPDATE shopping_list SET last_used_at = ? WHERE id = ?;
+
+archiveList:
+UPDATE shopping_list SET archived_at = ? WHERE id = ?;
+
+reviveList:
+UPDATE shopping_list SET archived_at = NULL, last_used_at = ? WHERE id = ?;
+
+deleteList:
+DELETE FROM shopping_list WHERE id = ?;
+
+deleteListRecipes:
+DELETE FROM shopping_list_recipe WHERE list_id = ?;
+
+deleteListOwnItems:
+DELETE FROM shopping_own_item WHERE list_id = ?;
+
+clearOverrides:
+DELETE FROM shopping_override WHERE list_id = ?;
+
+selectListRecipes:
+SELECT * FROM shopping_list_recipe WHERE list_id = ? ORDER BY added_at;
+
+selectListRecipe:
+SELECT * FROM shopping_list_recipe WHERE list_id = ? AND recipe_id = ?;
+
+insertListRecipe:
+INSERT INTO shopping_list_recipe(list_id, recipe_id, servings, added_at) VALUES (?, ?, ?, ?);
+
+updateServings:
+UPDATE shopping_list_recipe SET servings = ? WHERE list_id = ? AND recipe_id = ?;
+
+removeListRecipe:
+DELETE FROM shopping_list_recipe WHERE list_id = ? AND recipe_id = ?;
+
+removeRecipeFromAllLists:
+DELETE FROM shopping_list_recipe WHERE recipe_id = ?;
+
+clearTicksForRecipe:
+DELETE FROM shopping_tick
+WHERE list_id IN (SELECT list_id FROM shopping_list_recipe WHERE recipe_id = ?);
+
+selectOwnItems:
+SELECT * FROM shopping_own_item WHERE list_id = ? ORDER BY added_at;
+
+insertOwnItem:
+INSERT INTO shopping_own_item(id, list_id, text, added_at) VALUES (?, ?, ?, ?);
+
+deleteOwnItem:
+DELETE FROM shopping_own_item WHERE id = ?;
+
+selectTicks:
+SELECT item_key FROM shopping_tick WHERE list_id = ?;
+
+insertTick:
+INSERT OR IGNORE INTO shopping_tick(list_id, item_key) VALUES (?, ?);
+
+deleteTick:
+DELETE FROM shopping_tick WHERE list_id = ? AND item_key = ?;
+
+clearTicks:
+DELETE FROM shopping_tick WHERE list_id = ?;
+
+selectOverrides:
+SELECT * FROM shopping_override WHERE list_id = ?;
+
+upsertOverride:
+INSERT OR REPLACE INTO shopping_override(list_id, item_key, amount, basis) VALUES (?, ?, ?, ?);
+
+deleteOverride:
+DELETE FROM shopping_override WHERE list_id = ? AND item_key = ?;
+
+selectAliases:
+SELECT * FROM ingredient_alias;
+
+upsertAlias:
+INSERT OR REPLACE INTO ingredient_alias(alias_key, canonical_id, created_at) VALUES (?, ?, ?);
+
+selectAisles:
+SELECT * FROM ingredient_aisle;
+
+upsertAisle:
+INSERT OR REPLACE INTO ingredient_aisle(canonical_id, aisle) VALUES (?, ?);

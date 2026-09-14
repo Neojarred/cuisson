@@ -52,3 +52,18 @@ val CookbooksIcon: ImageVector = icon("cookbooks") {
         curveTo(16.5f, 17f, 13.5f, 17.5f, 12f, 19f)
     }
 }
+
+/** A basket: a handle and a body, for the Shopping tab. */
+val ShoppingIcon: ImageVector = icon("shopping") {
+    stroke {
+        moveTo(4.5f, 9.5f)
+        lineTo(19.5f, 9.5f)
+        lineTo(17.8f, 19f)
+        lineTo(6.2f, 19f)
+        close()
+    }
+    stroke {
+        moveTo(8.5f, 9.5f)
+        curveTo(8.5f, 4.5f, 15.5f, 4.5f, 15.5f, 9.5f)
+    }
+}

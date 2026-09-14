@@ -1,0 +1,55 @@
+-- Version 7 to version 8.
+--
+-- Shopping Lists, and the corrections a user makes to how an ingredient is recognised.
+--
+-- Nothing here is seeded. The ingredients Cuisson knows about ship inside the app rather
+-- than in the database, so an app update can improve them without a migration, and a
+-- fresh install has everything it needs without one. See ADR-0010.
+
+CREATE TABLE shopping_list (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    name                TEXT    NOT NULL,
+    created_at          INTEGER NOT NULL,
+    last_used_at        INTEGER NOT NULL,
+    archived_at         INTEGER
+);
+
+CREATE TABLE shopping_list_recipe (
+    list_id             TEXT    NOT NULL,
+    recipe_id           TEXT    NOT NULL,
+    servings            REAL,
+    added_at            INTEGER NOT NULL,
+    PRIMARY KEY (list_id, recipe_id)
+);
+
+CREATE TABLE shopping_own_item (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    list_id             TEXT    NOT NULL,
+    text                TEXT    NOT NULL,
+    added_at            INTEGER NOT NULL
+);
+
+CREATE TABLE shopping_tick (
+    list_id             TEXT    NOT NULL,
+    item_key            TEXT    NOT NULL,
+    PRIMARY KEY (list_id, item_key)
+);
+
+CREATE TABLE shopping_override (
+    list_id             TEXT    NOT NULL,
+    item_key            TEXT    NOT NULL,
+    amount              TEXT    NOT NULL,
+    basis               TEXT    NOT NULL,
+    PRIMARY KEY (list_id, item_key)
+);
+
+CREATE TABLE ingredient_alias (
+    alias_key           TEXT    NOT NULL PRIMARY KEY,
+    canonical_id        TEXT    NOT NULL,
+    created_at          INTEGER NOT NULL
+);
+
+CREATE TABLE ingredient_aisle (
+    canonical_id        TEXT    NOT NULL PRIMARY KEY,
+    aisle               TEXT    NOT NULL
+);

@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import app.cuisson.data.ShoppingListSummary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
@@ -55,8 +59,12 @@ fun RecipeScreen(
     onFile: (Chapter) -> Unit = {},
     onCook: (Double) -> Unit = {},
     onEdit: () -> Unit = {},
+    lists: List<ShoppingListSummary> = emptyList(),
+    onAddToList: (ShoppingListSummary, Double?) -> Unit = { _, _ -> },
+    onNewListWith: (String, Double?) -> Unit = { _, _ -> },
 ) {
     var filing by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(false) }
     // The Serving Scale is never stored on the Recipe, which always holds the servings it
     // was written for. This is a way of reading it, not a change to it.
     val written = recipe.servings?.count
@@ -82,24 +90,8 @@ fun RecipeScreen(
                     TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
                         Text("Back", style = MaterialTheme.typography.labelLarge)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
-                            Text("Edit", style = MaterialTheme.typography.labelLarge)
-                        }
-                        if (cookbooks.isNotEmpty()) {
-                            TextButton(
-                                onClick = { filing = true },
-                                contentPadding = PaddingValues(0.dp),
-                            ) {
-                                Text("File in…", style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-                        TextButton(
-                            onClick = { onCook(factor) },
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
-                            Text("Cook", style = MaterialTheme.typography.labelLarge)
-                        }
+                    TextButton(onClick = onEdit, contentPadding = PaddingValues(0.dp)) {
+                        Text("Edit", style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -130,6 +122,31 @@ fun RecipeScreen(
                         unit = recipe.servings?.unit,
                         onChange = { serving = it },
                     )
+                }
+                // What you do with a recipe, below what you need to know to decide. Cook
+                // first, since it is the reason to be here; the header keeps only the way
+                // back and the way into editing.
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onCook(factor) },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Cook") }
+                    OutlinedButton(
+                        onClick = { adding = true },
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp),
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Add to list", maxLines = 1) }
+                    if (cookbooks.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { filing = true },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            modifier = Modifier.weight(1f),
+                        ) { Text("File in", maxLines = 1) }
+                    }
                 }
                 Spacer(Modifier.height(30.dp))
                 SectionHeading("Ingredients")
@@ -199,6 +216,23 @@ fun RecipeScreen(
 
             item { Spacer(Modifier.height(48.dp)) }
         }
+    }
+
+    if (adding) {
+        val servingsShown = serving ?: written
+        AddToListDialog(
+            servings = servingsShown,
+            lists = lists,
+            onPick = { list ->
+                adding = false
+                onAddToList(list, servingsShown)
+            },
+            onCreate = { name ->
+                adding = false
+                onNewListWith(name, servingsShown)
+            },
+            onDismiss = { adding = false },
+        )
     }
 
     if (filing) {

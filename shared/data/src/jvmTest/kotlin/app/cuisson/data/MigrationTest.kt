@@ -144,6 +144,28 @@ class MigrationTest {
         assertEquals(null, repository.stepsFor(app.cuisson.domain.RecipeId("r")).single().amendment)
     }
 
+    /**
+     * Version 8 adds shopping lists. Nothing is seeded, so the only thing to prove is that
+     * a database which predates them ends up able to hold one.
+     */
+    @Test
+    fun `a version 1 database can hold a shopping list`() {
+        val driver = driver()
+        version1.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+            driver.execute(null, "$it;", 0)
+        }
+
+        CuissonDatabase.Schema.migrate(driver, 1L, CuissonDatabase.Schema.version)
+
+        val shopping = CuissonDatabase(driver).shoppingQueries
+        shopping.insertList("week", "This week", 1, 1)
+        shopping.insertListRecipe("week", "keep-me", 4.0, 1)
+        shopping.upsertAlias("yuzu kosho", "chilli-flakes", 1)
+        assertEquals("This week", shopping.selectList("week").executeAsOne().name)
+        assertEquals(1, shopping.selectListRecipes("week").executeAsList().size)
+        assertEquals(1, shopping.selectAliases().executeAsList().size)
+    }
+
     @Test
     fun `a fresh database is created at the current version and is queryable`() {
         val driver = driver()

@@ -70,8 +70,15 @@ private val UNITS: Map<String, Measure> = buildMap {
     put(UnitKind.NONE, "drizzle", "drizzle", "filet")
 }
 
+/** Every single-word unit, folded, for code that needs to step over one. */
+internal val UNIT_WORDS: Set<String> get() = UNITS.keys
+
 /** Written as several words, so they have to be tried before the single-word lookup. */
 private val UNIT_PHRASES: List<Pair<String, Measure>> = listOf(
+    "c. a s." to Measure("tbsp", UnitKind.IMPERIAL),
+    "c.a.s." to Measure("tbsp", UnitKind.IMPERIAL),
+    "c. a c." to Measure("tsp", UnitKind.IMPERIAL),
+    "c.a.c." to Measure("tsp", UnitKind.IMPERIAL),
     "cuillere a soupe" to Measure("tbsp", UnitKind.IMPERIAL),
     "cuilleres a soupe" to Measure("tbsp", UnitKind.IMPERIAL),
     "c a soupe" to Measure("tbsp", UnitKind.IMPERIAL),
@@ -160,6 +167,12 @@ private fun readMeasureAt(line: String, at: Int): Pair<Measure, Int>? {
         return measure to at + skipped + phrase.length
     }
 
+    // A bare "c." is an American cup. Only when it is not the start of "c. a s.", which
+    // the phrases above have already had their chance at.
+    if (folded.startsWith("c. ") && !folded.startsWith("c. a ")) {
+        return Measure("cup", UnitKind.IMPERIAL) to at + skipped + 2
+    }
+
     val word = folded.takeWhile { it.isLetter() }
     if (word.isEmpty()) return null
     val measure = UNITS[word] ?: return null
@@ -245,8 +258,13 @@ private fun looksLikeInstruction(tail: String): Boolean {
     }
 }
 
-/** Lowercase and stripped of accents, so "pincée" and "pincee" are the same word. */
-private fun fold(text: String): String = text.lowercase()
+/**
+ * Lowercase and stripped of accents, so "pincée" and "pincee" are the same word. The
+ * ligature is expanded rather than mapped, since "œuf" is written "oeuf" just as often.
+ */
+internal fun fold(text: String): String = text.lowercase()
+    .replace("œ", "oe")
+    .replace("æ", "ae")
     .map { ACCENTS[it] ?: it }
     .joinToString("")
 
@@ -257,5 +275,6 @@ private val ACCENTS: Map<Char, Char> = buildMap {
     "òóôö".forEach { put(it, 'o') }
     "ùúûü".forEach { put(it, 'u') }
     put('ç', 'c')
+    put('ñ', 'n')
     put('’', '\'')
 }

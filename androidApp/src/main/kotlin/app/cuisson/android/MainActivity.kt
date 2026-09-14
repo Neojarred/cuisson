@@ -2,6 +2,7 @@ package app.cuisson.android
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-private enum class Tab { Recipes, Cookbooks }
+private enum class Tab { Recipes, Cookbooks, Shopping }
 
 class MainActivity : ComponentActivity() {
 
@@ -41,6 +42,11 @@ class MainActivity : ComponentActivity() {
         val repository = Cuisson.repository(this)
         val recipes = repository.observeAll()
         val cookbooks = repository.observeCookbooks()
+        val shopping = Cuisson.shopping(this)
+        val shoppingLists = shopping.observeLists()
+        // Ingredient names and aisles on a list follow the phone's language, since they
+        // are what you read standing in the shop.
+        val language = java.util.Locale.getDefault().language
 
         Cuisson.background.launch {
             repository.backfillSearchIfEmpty()
@@ -58,6 +64,7 @@ class MainActivity : ComponentActivity() {
             CuissonTheme {
                 val library by recipes.collectAsStateWithLifecycle(emptyList())
                 val shelf by cookbooks.collectAsStateWithLifecycle(emptyList())
+                val lists by shoppingLists.collectAsStateWithLifecycle(emptyList())
                 val open = library.firstOrNull { it.id == openId }
 
                 val shown by produceState(library, library, query) {
@@ -107,6 +114,22 @@ class MainActivity : ComponentActivity() {
                             CookModeActivity.start(this@MainActivity, open.id, factor)
                         },
                         onEdit = { editing = true },
+                        lists = lists,
+                        onAddToList = { list, servings ->
+                            Toast.makeText(this@MainActivity, "Added to ${list.name}", Toast.LENGTH_SHORT).show()
+                            Cuisson.background.launch {
+                                shopping.addRecipe(list.id, open.id, servings, System.currentTimeMillis())
+                            }
+                        },
+                        onNewListWith = { name, servings ->
+                            Toast.makeText(this@MainActivity, "Added to $name", Toast.LENGTH_SHORT).show()
+                            val id = UUID.randomUUID().toString()
+                            Cuisson.background.launch {
+                                val now = System.currentTimeMillis()
+                                shopping.createList(id, name, now)
+                                shopping.addRecipe(id, open.id, servings, now)
+                            }
+                        },
                         onBack = { openId = null },
                         )
                     }
@@ -172,10 +195,23 @@ class MainActivity : ComponentActivity() {
                                     icon = { Icon(CookbooksIcon, contentDescription = null) },
                                     label = { Text("Cookbooks") },
                                 )
+                                NavigationBarItem(
+                                    selected = tab == Tab.Shopping,
+                                    onClick = { tab = Tab.Shopping },
+                                    icon = { Icon(ShoppingIcon, contentDescription = null) },
+                                    label = { Text("Shopping") },
+                                )
                             }
                         },
                     ) { inset ->
-                        Body(
+                        if (tab == Tab.Shopping) {
+                            ShoppingTab(
+                                shopping = shopping,
+                                language = language,
+                                modifier = Modifier.padding(bottom = inset.calculateBottomPadding()),
+                                onOpenRecipe = { openId = it },
+                            )
+                        } else Body(
                             modifier = Modifier.padding(bottom = inset.calculateBottomPadding()),
                             tab = tab,
                             shown = shown,
@@ -233,6 +269,7 @@ class MainActivity : ComponentActivity() {
                     onOpen = onOpenCookbook,
                     onCreate = onCreateCookbook,
                 )
+                Tab.Shopping -> Unit
             }
         }
     }

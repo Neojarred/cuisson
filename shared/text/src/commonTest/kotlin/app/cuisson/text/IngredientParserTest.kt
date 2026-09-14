@@ -148,6 +148,20 @@ class IngredientParserTest {
         assertEquals(0.25, parseIngredient("1/4 de tasse d'huile d'olive").quantityMin)
     }
 
+    /**
+     * "c." is how American recipes abbreviate a cup and how French ones start a spoon.
+     * Unread, it put an item called "c. whole milk" on a shopping list.
+     */
+    @Test
+    fun `c dot is a cup, and c dot a s dot is a tablespoon`() {
+        val milk = parseIngredient("2 c. whole milk")
+        assertEquals("cup", milk.unit)
+        assertEquals("whole milk", milk.item)
+
+        val oil = parseIngredient("1 c. à s. d'huile d'arachide")
+        assertEquals("tbsp", oil.unit)
+    }
+
     @Test
     fun `a decimal comma is a decimal`() {
         val parsed = parseIngredient("1,5 kg de joue de boeuf")
