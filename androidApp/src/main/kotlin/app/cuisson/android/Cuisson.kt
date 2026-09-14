@@ -2,6 +2,7 @@ package app.cuisson.android
 
 import android.content.Context
 import app.cuisson.data.DatabaseDriverFactory
+import app.cuisson.data.LibraryExport
 import app.cuisson.data.RecipeRepository
 import app.cuisson.data.ShoppingRepository
 import app.cuisson.data.db.CuissonDatabase
@@ -34,6 +35,11 @@ object Cuisson {
         // ImportActivity first and would otherwise save a recipe with nowhere to live.
         if (existing == null) repository.ensureUnfiled()
         return repository
+    }
+
+    fun exports(context: Context): LibraryExport {
+        val recipes = repository(context)
+        return LibraryExport(database!!, recipes)
     }
 
     fun shopping(context: Context): ShoppingRepository {

@@ -229,8 +229,9 @@ folder, or nothing at all.
 _Avoid_: cloud, server, backend, account
 
 **Export File**:
-A single versioned `.cuisson` archive holding every recipe including Raw Text, plus images.
-The promise that the user's data is theirs.
+A single versioned `.cuisson` file holding a whole library: every recipe with its Raw Text
+and images, the Cookbooks, the cooking record, Shopping Lists and corrections. The promise
+that the user's data is theirs.
 _Avoid_: dump, backup file, archive
 
 ## Words we do not use

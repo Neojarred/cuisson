@@ -274,3 +274,23 @@ SELECT id, title, source_url FROM recipe WHERE source_url IS NOT NULL;
 
 countRecipes:
 SELECT count(*) FROM recipe;
+
+-- Export Files. Reading everything out, and putting back only what is missing, so restoring
+-- into a library that already holds some of it never overwrites what the user has.
+selectAllChapters:
+SELECT * FROM chapter ORDER BY cookbook_id, position;
+
+selectAllCookEntries:
+SELECT * FROM cook_entry ORDER BY cooked_at;
+
+chapterExists:
+SELECT count(*) FROM chapter WHERE id = ?;
+
+insertCookbookIfMissing:
+INSERT OR IGNORE INTO cookbook(id, name, position, created_at) VALUES (?, ?, ?, ?);
+
+insertChapterIfMissing:
+INSERT OR IGNORE INTO chapter(id, cookbook_id, name, position) VALUES (?, ?, ?, ?);
+
+insertCookEntryIfMissing:
+INSERT OR IGNORE INTO cook_entry(id, recipe_id, cooked_at, rating, note) VALUES (?, ?, ?, ?, ?);

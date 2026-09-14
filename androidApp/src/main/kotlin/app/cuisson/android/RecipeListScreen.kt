@@ -44,6 +44,8 @@ fun RecipeListScreen(
     title: String = "Recipes",
     showSearch: Boolean = true,
     importLabel: String = "Import",
+    onExport: (() -> Unit)? = null,
+    onRestore: (() -> Unit)? = null,
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -77,15 +79,31 @@ fun RecipeListScreen(
                 SearchField(query, onQueryChange)
             }
             Spacer(Modifier.height(10.dp))
-            Text(
-                text = when {
-                    total == 0 -> ""
-                    query.isNotBlank() -> "${recipes.size} of $total"
-                    else -> "$total saved"
-                },
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = when {
+                        total == 0 -> ""
+                        query.isNotBlank() -> "${recipes.size} of $total"
+                        else -> "$total saved"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                // The whole library out to one file and back, beside the count it protects.
+                // Restore stays available on an empty library, which is exactly when a new
+                // phone needs it.
+                onExport?.takeIf { total > 0 }?.let {
+                    TextButton(onClick = it) {
+                        Text("Export", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                onRestore?.let {
+                    TextButton(onClick = it) {
+                        Text("Restore", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
 
             if (recipes.isEmpty() && query.isNotBlank()) {

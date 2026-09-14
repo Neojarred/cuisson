@@ -162,3 +162,33 @@ SELECT * FROM ingredient_aisle;
 
 upsertAisle:
 INSERT OR REPLACE INTO ingredient_aisle(canonical_id, aisle) VALUES (?, ?);
+
+-- Export Files. See LibraryExport.
+selectAllListRecipes:
+SELECT * FROM shopping_list_recipe;
+
+selectAllOwnItems:
+SELECT * FROM shopping_own_item ORDER BY added_at;
+
+selectAllOverrides:
+SELECT * FROM shopping_override;
+
+insertListIfMissing:
+INSERT OR IGNORE INTO shopping_list(id, name, created_at, last_used_at, archived_at)
+VALUES (?, ?, ?, ?, ?);
+
+insertListRecipeIfMissing:
+INSERT OR IGNORE INTO shopping_list_recipe(list_id, recipe_id, servings, added_at)
+VALUES (?, ?, ?, ?);
+
+insertOwnItemIfMissing:
+INSERT OR IGNORE INTO shopping_own_item(id, list_id, text, added_at) VALUES (?, ?, ?, ?);
+
+insertOverrideIfMissing:
+INSERT OR IGNORE INTO shopping_override(list_id, item_key, amount, basis) VALUES (?, ?, ?, ?);
+
+insertAliasIfMissing:
+INSERT OR IGNORE INTO ingredient_alias(alias_key, canonical_id, created_at) VALUES (?, ?, ?);
+
+insertAisleIfMissing:
+INSERT OR IGNORE INTO ingredient_aisle(canonical_id, aisle) VALUES (?, ?);
