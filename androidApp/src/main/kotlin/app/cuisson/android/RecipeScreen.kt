@@ -37,6 +37,7 @@ import app.cuisson.domain.Cookbook
 import app.cuisson.domain.Recipe
 import app.cuisson.domain.referencedNoteLabels
 import app.cuisson.domain.Step
+import app.cuisson.text.scaleIngredient
 
 /**
  * Ingredient lines are rendered from [IngredientLine.text], never rebuilt from the
@@ -52,10 +53,19 @@ fun RecipeScreen(
     lastCooked: Long? = null,
     chaptersOf: (Cookbook) -> List<Chapter> = { emptyList() },
     onFile: (Chapter) -> Unit = {},
-    onCook: () -> Unit = {},
+    onCook: (Double) -> Unit = {},
     onEdit: () -> Unit = {},
 ) {
     var filing by remember { mutableStateOf(false) }
+    // The Serving Scale is never stored on the Recipe, which always holds the servings it
+    // was written for. This is a way of reading it, not a change to it.
+    val written = recipe.servings?.count
+    var serving by remember(recipe.id) { mutableStateOf(written) }
+    val factor = if (written != null && written > 0 && serving != null) {
+        serving!! / written
+    } else {
+        1.0
+    }
     BackHandler(onBack = onBack)
     val capturedNoteLabels = recipe.sourceNotes.mapNotNull { it.label?.lowercase() }.toSet()
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -84,7 +94,10 @@ fun RecipeScreen(
                                 Text("File in…", style = MaterialTheme.typography.labelLarge)
                             }
                         }
-                        TextButton(onClick = onCook, contentPadding = PaddingValues(0.dp)) {
+                        TextButton(
+                            onClick = { onCook(factor) },
+                            contentPadding = PaddingValues(0.dp),
+                        ) {
                             Text("Cook", style = MaterialTheme.typography.labelLarge)
                         }
                     }
@@ -109,6 +122,15 @@ fun RecipeScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                if (written != null) {
+                    Spacer(Modifier.height(18.dp))
+                    ServingsRow(
+                        serving = serving ?: written,
+                        written = written,
+                        unit = recipe.servings?.unit,
+                        onChange = { serving = it },
+                    )
+                }
                 Spacer(Modifier.height(30.dp))
                 SectionHeading("Ingredients")
             }
@@ -125,7 +147,7 @@ fun RecipeScreen(
                     )
                     Spacer(Modifier.height(4.dp))
                 }
-                IngredientRow(line)
+                IngredientRow(line, factor)
             }
 
             item {
@@ -283,14 +305,68 @@ private fun SectionHeading(text: String) {
     Spacer(Modifier.height(12.dp))
 }
 
+/**
+ * How many this is being cooked for.
+ *
+ * Only shown when the recipe says what it was written for, because a scale needs
+ * something to be a scale of. Guessing a base and multiplying by it would produce
+ * confident, wrong numbers in an ingredient list, which is the worst place for them.
+ */
 @Composable
-private fun IngredientRow(line: IngredientLine) {
+private fun ServingsRow(
+    serving: Double,
+    written: Double,
+    unit: String?,
+    onChange: (Double) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Stepper("\u2212", enabled = serving > 1) { onChange(serving - 1) }
+        Text(
+            text = countText(serving) + " " + (unit ?: "servings"),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        Stepper("+", enabled = serving < written * 8) { onChange(serving + 1) }
+        if (serving != written) {
+            Spacer(Modifier.width(10.dp))
+            TextButton(
+                onClick = { onChange(written) },
+                contentPadding = PaddingValues(horizontal = 6.dp),
+            ) {
+                Text(
+                    text = "written for ${countText(written)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Stepper(label: String, enabled: Boolean, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+private fun countText(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
+
+@Composable
+private fun IngredientRow(line: IngredientLine, factor: Double) {
     Row(
         modifier = Modifier.padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = line.text,
+            // Scaled at display time from the line's own words. Nothing is rewritten and
+            // nothing is stored: leaving the screen puts the recipe back as published.
+            text = scaleIngredient(line.text, factor),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
@@ -379,11 +455,7 @@ private fun subtitleFor(recipe: Recipe): String {
     // nothing to anyone holding a knife. What is worth saying is when the result should
     // not be trusted, and that has its own mark.
     val parts = mutableListOf<String>()
-    recipe.servings?.let { servings ->
-        val count = if (servings.count % 1.0 == 0.0) servings.count.toInt().toString()
-        else servings.count.toString()
-        parts += listOfNotNull(count, servings.unit ?: "servings").joinToString(" ")
-    }
+    // Servings are not repeated here: they have their own control, which can change them.
     recipe.timings.totalMinutes?.let { parts += "$it min" }
     if (recipe.extraction.needsReview) parts += "needs review"
     return parts.joinToString(" · ")

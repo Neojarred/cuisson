@@ -101,7 +101,9 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         },
-                        onCook = { CookModeActivity.start(this@MainActivity, open.id) },
+                        onCook = { factor ->
+                            CookModeActivity.start(this@MainActivity, open.id, factor)
+                        },
                         onEdit = { editing = true },
                         onBack = { openId = null },
                         )

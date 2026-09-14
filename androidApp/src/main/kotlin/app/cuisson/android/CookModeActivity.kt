@@ -26,6 +26,7 @@ class CookModeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val id = intent?.getStringExtra(EXTRA_RECIPE)?.let(::RecipeId) ?: run { finish(); return }
+        val factor = intent?.getDoubleExtra(EXTRA_SCALE, 1.0) ?: 1.0
         val repository = Cuisson.repository(this)
         recipe = repository.all().firstOrNull { it.id == id } ?: run { finish(); return }
 
@@ -34,6 +35,7 @@ class CookModeActivity : ComponentActivity() {
                 recipe?.let { current ->
                     CookModeScreen(
                         recipe = current,
+                        factor = factor,
                         onFinish = { cooked ->
                             if (cooked) {
                                 repository.logCook(
@@ -59,11 +61,13 @@ class CookModeActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_RECIPE = "recipe"
+        private const val EXTRA_SCALE = "scale"
 
-        fun start(context: Context, id: RecipeId) {
+        fun start(context: Context, id: RecipeId, factor: Double = 1.0) {
             context.startActivity(
                 Intent(context, CookModeActivity::class.java)
                     .putExtra(EXTRA_RECIPE, id.value)
+                    .putExtra(EXTRA_SCALE, factor)
             )
         }
     }

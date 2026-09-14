@@ -48,11 +48,16 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.cuisson.domain.Recipe
+import app.cuisson.text.scaleIngredient
 import kotlinx.coroutines.delay
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
+fun CookModeScreen(
+    recipe: Recipe,
+    factor: Double = 1.0,
+    onFinish: (cooked: Boolean) -> Unit,
+) {
     // Held awake only while this screen is open. A recipe you are reading on the sofa has
     // no business keeping the screen on.
     val view = LocalView.current
@@ -162,7 +167,8 @@ fun CookModeScreen(recipe: Recipe, onFinish: (cooked: Boolean) -> Unit) {
                         Spacer(Modifier.height(4.dp))
                     }
                     Text(
-                        text = line.text,
+                        // The same scale the recipe was being read at a moment ago.
+                        text = scaleIngredient(line.text, factor),
                         style = MaterialTheme.typography.bodyLarge,
                         textDecoration = if (done) TextDecoration.LineThrough else null,
                         color = if (done) MaterialTheme.colorScheme.onSurfaceVariant
