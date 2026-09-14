@@ -140,9 +140,17 @@ fun consolidate(
         tally.recognisedAs += resolution.key
         tally.contributions += contribution
 
-        val quantity = parsed.quantityMin ?: return
+        // A line that states its amount twice, "4 cups (400 g) cheese", is bought by the
+        // metric half. Not for a container: in "2 cans (400 g each)" the bracket is the size
+        // of one tin, and taking it would buy half the tomatoes. And not for spoons, where
+        // "3/4 tsp. (4 g)" of baking soda is clearer as the spoon it was measured with.
+        val metric = parsed.altQuantity != null && parsed.altUnit != null &&
+            parsed.unitSystem != UnitKind.METRIC && parsed.unitSystem != UnitKind.COUNT &&
+            parsed.unit !in SPOONS &&
+            (parsed.altUnit in GRAMS || parsed.altUnit in MILLILITRES)
+        val quantity = (if (metric) parsed.altQuantity else parsed.quantityMin) ?: return
+        val unit = if (metric) parsed.altUnit else parsed.unit
         val amount = quantity * factor
-        val unit = parsed.unit
         when {
             unit == null -> tally.count(resolution.ingredient?.countAs ?: "", amount)
             unit in GRAMS -> {
@@ -154,7 +162,15 @@ fun consolidate(
                 tally.hasMillilitres = true
                 if (unit !in SPOONS) tally.spoonsOnly = false
             }
-            parsed.unitSystem == UnitKind.COUNT -> tally.count(unit, amount)
+            parsed.unitSystem == UnitKind.COUNT -> {
+                val grams = resolution.ingredient?.gramsPer?.get(unit)
+                if (grams != null) {
+                    tally.grams += amount * grams
+                    tally.hasGrams = true
+                } else {
+                    tally.count(unit, amount)
+                }
+            }
             // A pinch or a handful does not change what anybody buys.
             else -> Unit
         }
@@ -286,16 +302,24 @@ private fun grams(value: Double, french: Boolean): String = when {
     else -> "${value.roundToLong().coerceAtLeast(1)} g"
 }
 
-/** Spoons stay spoons while they are small enough to measure that way. */
+/**
+ * Spoons stay spoons while they are small enough to measure that way, in quarters of a
+ * teaspoon and halves of a tablespoon. Nobody reads "1 7/8 tbsp" of vanilla, and "67 ml" of
+ * grated ginger is a number nobody could picture.
+ */
 private fun millilitres(value: Double, spoonsOnly: Boolean, french: Boolean): String = when {
     spoonsOnly && value < 14.7 ->
-        "${formatAmount(eighths(value / 4.92892), french)} ${if (french) "c. à c." else "tsp"}"
-    spoonsOnly && value < 45 ->
-        "${formatAmount(eighths(value / 14.7868), french)} ${if (french) "c. à s." else "tbsp"}"
+        "${formatAmount(steps(value / 4.92892, 4), french)} ${if (french) "c. à c." else "tsp"}"
+    spoonsOnly && value < 120 ->
+        "${formatAmount(steps(value / 14.7868, 2), french)} ${if (french) "c. à s." else "tbsp"}"
     value >= 1000 -> "${decimal(value / 1000, french)} l"
     value >= 100 -> "${(value / 5).roundToLong() * 5} ml"
     else -> "${value.roundToLong().coerceAtLeast(1)} ml"
 }
+
+/** Rounded to the nearest 1/[per], and never below one of those. */
+private fun steps(value: Double, per: Int): Double =
+    ((value * per).roundToLong().coerceAtLeast(1)).toDouble() / per
 
 private val COUNT_WORDS = mapOf(
     "clove" to ("clove" to "gousse"), "can" to ("can" to "boîte"),
@@ -303,7 +327,7 @@ private val COUNT_WORDS = mapOf(
     "bunch" to ("bunch" to "botte"), "head" to ("head" to "tête"),
     "slice" to ("slice" to "tranche"), "piece" to ("piece" to "morceau"),
     "stalk" to ("stalk" to "branche"), "ball" to ("ball" to "boule"),
-    "packet" to ("packet" to "sachet"),
+    "packet" to ("packet" to "sachet"), "bottle" to ("bottle" to "bouteille"),
 )
 
 private fun countLabel(unit: String, amount: Double, french: Boolean): String {

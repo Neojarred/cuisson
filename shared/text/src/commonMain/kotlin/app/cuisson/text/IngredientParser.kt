@@ -15,6 +15,8 @@ data class ParsedIngredient(
     val unitSystem: UnitKind = UnitKind.NONE,
     val altUnit: String? = null,
     val altSystem: UnitKind = UnitKind.NONE,
+    /** The amount stated in [altUnit]: the 45 in "3 tbsp (45 ml)". */
+    val altQuantity: Double? = null,
     val item: String? = null,
     val preparation: String? = null,
     val optional: Boolean = false,
@@ -55,7 +57,7 @@ private val UNITS: Map<String, Measure> = buildMap {
     put(UnitKind.IMPERIAL, "qt", "qt", "quart", "quarts")
     put(UnitKind.IMPERIAL, "pt", "pt", "pint", "pints")
     put(UnitKind.COUNT, "clove", "clove", "cloves", "gousse", "gousses")
-    put(UnitKind.COUNT, "can", "can", "cans", "tin", "tins", "boite", "boites")
+    put(UnitKind.COUNT, "can", "can", "cans", "tin", "tins", "boite", "boites", "conserve", "conserves")
     put(UnitKind.COUNT, "stick", "stick", "sticks", "baton", "batons")
     put(UnitKind.COUNT, "sprig", "sprig", "sprigs", "brin", "brins")
     put(UnitKind.COUNT, "bunch", "bunch", "bunches", "botte", "bottes")
@@ -65,7 +67,9 @@ private val UNITS: Map<String, Measure> = buildMap {
     put(UnitKind.COUNT, "stalk", "stalk", "stalks", "tige", "tiges")
     put(UnitKind.COUNT, "ball", "ball", "balls", "boule", "boules")
     put(UnitKind.COUNT, "packet", "packet", "packets", "sachet", "sachets", "package")
+    put(UnitKind.COUNT, "bottle", "bottle", "bottles", "bouteille", "bouteilles")
     put(UnitKind.NONE, "pinch", "pinch", "pinches", "pincee", "pincees")
+    put(UnitKind.NONE, "knob", "knob", "knobs")
     put(UnitKind.NONE, "handful", "handful", "handfuls", "poignee", "poignees")
     put(UnitKind.NONE, "drizzle", "drizzle", "filet")
 }
@@ -115,18 +119,18 @@ fun parseIngredient(line: String): ParsedIngredient {
     val amount = readAmountAt(text, 0)?.takeIf { text.take(it.where.first).isBlank() }
     var at = amount?.let { it.where.last + 1 } ?: 0
 
-    val unit = readMeasureAt(text, at)
+    val unit = if (amount != null) unitAfterAmount(text, at) else readMeasureAt(text, at)
     if (unit != null) at = unit.second
 
     // A conversion right after the unit, "3 tbsp (45 ml)", tells us the same amount in
     // the other system. Worth keeping: a shopping list adding up millilitres does not
     // want to convert tablespoons itself.
-    var alt: Measure? = null
+    var alt: Conversion? = null
     if (unit != null) {
         val conversion = readConversion(text, at)
         if (conversion != null) {
-            alt = conversion.first
-            at = conversion.second
+            alt = conversion
+            at = conversion.end
         }
     }
 
@@ -145,8 +149,9 @@ fun parseIngredient(line: String): ParsedIngredient {
         quantityMax = amount?.upper ?: amount?.value,
         unit = unit?.first?.canonical,
         unitSystem = unit?.first?.kind ?: UnitKind.NONE,
-        altUnit = alt?.canonical,
-        altSystem = alt?.kind ?: UnitKind.NONE,
+        altUnit = alt?.measure?.canonical,
+        altSystem = alt?.measure?.kind ?: UnitKind.NONE,
+        altQuantity = alt?.quantity,
         item = item,
         preparation = preparation,
         optional = optional,
@@ -181,8 +186,52 @@ private fun readMeasureAt(line: String, at: Int): Pair<Measure, Int>? {
     return measure to end
 }
 
+/**
+ * The unit after an amount, allowing for what recipes put in between.
+ *
+ * "1/4 de tasse" has a connecting word before the unit. "1 (14-ounce) can", "1 large can"
+ * and "2 x 400g cans" have a size, and the unit after it is the container that gets
+ * bought, so only a counting unit is accepted past a size: "2 large eggs" must not turn
+ * into two of a unit called eggs.
+ */
+private fun unitAfterAmount(line: String, at: Int): Pair<Measure, Int>? {
+    readMeasureAt(line, at)?.let { return it }
+    var i = at
+    while (i < line.length && line[i] == ' ') i++
+
+    val word = fold(line.substring(i)).takeWhile { it.isLetter() }
+    if (word == "de" || word == "d" || word == "of") {
+        var j = i + word.length
+        if (line.getOrNull(j) == '\'' || line.getOrNull(j) == '\u2019') j++
+        readMeasureAt(line, j)?.let { return it }
+    }
+
+    val past = skipSize(line, i) ?: return null
+    return readMeasureAt(line, past)?.takeIf { it.first.kind == UnitKind.COUNT }
+}
+
+private val SIZE_WORDS = setOf("large", "small", "medium", "big", "grosse", "gros", "petite", "petit")
+
+/** The position after a size: "(14-ounce)", "x 400g", "large". Null if there is none. */
+private fun skipSize(line: String, at: Int): Int? {
+    val next = line.getOrNull(at) ?: return null
+    return when {
+        next == '(' -> line.indexOf(')', at).takeIf { it >= 0 }?.plus(1)
+        (next == 'x' || next == 'X') && line.getOrNull(at + 1) == ' ' -> {
+            val size = readAmountAt(line, at + 1) ?: return null
+            readMeasureAt(line, size.where.last + 1)?.second
+        }
+        else -> {
+            val word = fold(line.substring(at)).takeWhile { it.isLetter() }
+            if (word in SIZE_WORDS) at + word.length else null
+        }
+    }
+}
+
+private class Conversion(val measure: Measure, val quantity: Double, val end: Int)
+
 /** "(45 ml)" or "/ 1 kg" straight after a unit: the same amount in the other system. */
-private fun readConversion(line: String, at: Int): Pair<Measure, Int>? {
+private fun readConversion(line: String, at: Int): Conversion? {
     var i = at
     while (i < line.length && line[i] == ' ') i++
     val opener = line.getOrNull(i) ?: return null
@@ -196,7 +245,7 @@ private fun readConversion(line: String, at: Int): Pair<Measure, Int>? {
         if (close < 0) return null
         end = close + 1
     }
-    return unit.first to end
+    return Conversion(unit.first, amount.value, end)
 }
 
 /**

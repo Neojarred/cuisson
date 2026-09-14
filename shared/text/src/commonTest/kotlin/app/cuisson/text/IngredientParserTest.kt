@@ -162,6 +162,48 @@ class IngredientParserTest {
         assertEquals("tbsp", oil.unit)
     }
 
+    /**
+     * The unit a shop sells is sometimes hidden behind its size. Before this, a shopping list
+     * read eight tins of tomatoes as "8".
+     */
+    @Test
+    fun `a container behind its size is still the unit`() {
+        val beans = parseIngredient("1 (14-ounce) can kidney beans")
+        assertEquals("can", beans.unit)
+        assertEquals("kidney beans", beans.item)
+        assertEquals("can", parseIngredient("1 large can (28 ounces) diced tomatoes").unit)
+        val tomatoes = parseIngredient("2 x 400g cans chopped tomatoes")
+        assertEquals("can", tomatoes.unit)
+        assertEquals("chopped tomatoes", tomatoes.item)
+
+        val conserve = parseIngredient("1 grosse conserve de tomates en dés")
+        assertEquals("can", conserve.unit)
+        assertEquals("tomates en dés", conserve.item)
+    }
+
+    @Test
+    fun `a size in front of something that is not a container is part of its name`() {
+        val eggs = parseIngredient("2 large eggs")
+        assertNull(eggs.unit)
+        assertEquals("large eggs", eggs.item)
+    }
+
+    @Test
+    fun `a connecting word before the unit does not hide it`() {
+        val oil = parseIngredient("1/4 de tasse (65 ml) d'huile d'olive")
+        assertEquals("cup", oil.unit)
+        assertEquals("ml", oil.altUnit)
+        assertEquals(65.0, oil.altQuantity)
+    }
+
+    @Test
+    fun `bottles are counted and a knob is not an amount`() {
+        assertEquals("bottle", parseIngredient("½ bouteille de vin rouge").unit)
+        val butter = parseIngredient("1 knob of butter")
+        assertEquals("knob", butter.unit)
+        assertEquals("butter", butter.item)
+    }
+
     @Test
     fun `a decimal comma is a decimal`() {
         val parsed = parseIngredient("1,5 kg de joue de boeuf")

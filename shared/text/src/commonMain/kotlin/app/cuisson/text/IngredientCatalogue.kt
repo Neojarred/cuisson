@@ -49,6 +49,11 @@ data class CanonicalIngredient(
     val gramsPerMl: Double? = null,
     val soldBy: SoldBy? = null,
     val countAs: String? = null,
+    /**
+     * Grams in one of a counting unit, only where that is standard: an American stick of
+     * butter is 113 g by definition, not by guess.
+     */
+    val gramsPer: Map<String, Double> = emptyMap(),
     /** Water is in every recipe and on no shopping list. */
     val shoppable: Boolean = true,
     val aliases: List<String> = emptyList(),
@@ -136,6 +141,7 @@ private fun MutableList<CanonicalIngredient>.i(
     density: Double? = null,
     soldBy: SoldBy? = null,
     countAs: String? = null,
+    per: Map<String, Double> = emptyMap(),
     shoppable: Boolean = true,
     also: String = "",
 ) {
@@ -150,6 +156,7 @@ private fun MutableList<CanonicalIngredient>.i(
             gramsPerMl = density,
             soldBy = soldBy,
             countAs = countAs,
+            gramsPer = per,
             shoppable = shoppable,
             aliases = also.split('|').map { it.trim() }.filter { it.isNotEmpty() },
         )
@@ -314,6 +321,7 @@ private fun MutableList<CanonicalIngredient>.entries() {
     // Dairy and eggs. Ready-made pastry is here too, because in France it is in the
     // chilled aisle beside the butter.
     i("butter", "butter", "beurre", dairy, density = 0.96, soldBy = SoldBy.MASS,
+        per = mapOf("stick" to 113.4),
         also = "unsalted butter|salted butter|beurre doux|beurre demi-sel|beurre mou")
     i("milk", "milk", "lait", dairy, density = 1.03, soldBy = SoldBy.VOLUME,
         also = "whole milk|semi-skimmed milk|skimmed milk|lait entier|lait demi-ecreme|" +

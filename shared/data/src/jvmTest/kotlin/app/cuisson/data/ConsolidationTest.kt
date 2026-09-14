@@ -164,6 +164,76 @@ class ConsolidationTest {
         assertEquals("2 et 400 g", carrot.amount)
     }
 
+    /** From a real library, where "4 cups (400 g)" of cheese came out as 2.84 litres. */
+    @Test
+    fun `a line that states its amount in grams too is bought in grams`() {
+        val cheese = item(
+            "Mozzarella",
+            RecipeOnList(recipe("a", null, "4 cups (400 g) mozzarella cheese, grated"), null),
+        )
+        assertEquals("400 g", cheese.amount)
+    }
+
+    @Test
+    fun `a bracket after a container is the size of one, not the amount`() {
+        val chickpeas = item(
+            "Chickpeas",
+            RecipeOnList(recipe("a", null, "2 cans (400 g each) chickpeas"), null),
+        )
+        assertEquals("2 cans", chickpeas.amount)
+    }
+
+    @Test
+    fun `tins behind their size are counted as tins`() {
+        val beans = item(
+            "Kidney beans",
+            RecipeOnList(recipe("a", null, "1 (14-ounce) can kidney beans"), null),
+            RecipeOnList(recipe("b", null, "1 (14-ounce) can kidney beans, drained"), null),
+        )
+        assertEquals("2 cans", beans.amount)
+    }
+
+    @Test
+    fun `a stick of butter is weighed, because a stick is a standard weight`() {
+        val butter = item(
+            "Butter",
+            RecipeOnList(recipe("a", null, "2 sticks (1 cup) unsalted butter, melted"), null),
+        )
+        assertEquals("225 g", butter.amount)
+    }
+
+    @Test
+    fun `larger spoonfuls stay readable`() {
+        val ginger = item(
+            "Ginger",
+            RecipeOnList(recipe("a", null, "1 1/2 tbsp fresh ginger, minced"), null),
+            RecipeOnList(recipe("b", null, "1 1/2 tbsp fresh ginger, minced"), null),
+            RecipeOnList(recipe("c", null, "1 1/2 tbsp fresh ginger, minced"), null),
+        )
+        assertEquals("4 1/2 tbsp", ginger.amount)
+    }
+
+    /** Grams in brackets after a spoon are not what anybody measures baking soda with. */
+    @Test
+    fun `a spoon with grams beside it stays a spoon`() {
+        val soda = item(
+            "Baking soda",
+            RecipeOnList(recipe("a", null, "¾ tsp. (4 g) baking soda"), null),
+            RecipeOnList(recipe("b", null, "1 tsp baking soda"), null),
+        )
+        assertEquals("1 3/4 tsp", soda.amount)
+    }
+
+    @Test
+    fun `a knob of butter is not an amount`() {
+        val butter = item(
+            "Butter",
+            RecipeOnList(recipe("a", null, "1 knob of butter"), null),
+            RecipeOnList(recipe("b", null, "25g butter"), null),
+        )
+        assertEquals("25 g", butter.amount)
+    }
+
     @Test
     fun `a line with no amount still puts the thing on the list`() {
         val salt = item("Salt", RecipeOnList(recipe("a", null, "sel"), null))
