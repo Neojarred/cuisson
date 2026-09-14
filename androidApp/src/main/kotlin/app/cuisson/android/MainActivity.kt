@@ -46,6 +46,8 @@ class MainActivity : ComponentActivity() {
             repository.backfillSearchIfEmpty()
             // The duration reading changed, so every step is read again once.
             repository.backfillStepDurations(all = true)
+            // Likewise the ingredient parse, which is new and has nothing yet.
+            repository.backfillIngredientParse(all = true)
         }
 
         // Alarms do not survive a reboot, so a timer set before one would count down and

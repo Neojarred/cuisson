@@ -127,6 +127,44 @@ class EditingTest {
         assertNull(added.amendment, "a line with no publisher has nothing to amend")
     }
 
+    /**
+     * The mistake the step durations made, guarded against here. A parser wired into one
+     * caller and forgotten everywhere else passes all its own tests and reaches nobody.
+     */
+    @Test
+    fun `saving a recipe reads its ingredient lines`() {
+        val repo = repository()
+        repo.save(recipe(ingredients = listOf("2 onions, finely chopped", "300 g beef")))
+
+        val lines = repo.ingredientsFor(RecipeId("r"))
+        assertEquals(2.0, lines[0].quantity?.min)
+        assertEquals("onions", lines[0].itemText)
+        assertEquals("finely chopped", lines[0].preparation)
+        assertEquals("g", lines[1].unit?.canonical)
+        assertEquals(300.0, lines[1].quantity?.min)
+    }
+
+    @Test
+    fun `the parse follows the user's wording, not the publisher's`() {
+        val repo = repository()
+        val original = recipe(ingredients = listOf("2 onions"))
+        repo.save(original)
+
+        repo.replace(
+            original.copy(
+                ingredients = original.ingredients.map {
+                    it.copy(amendment = "3 shallots", parseConfidence = 0f)
+                }
+            )
+        )
+        repo.backfillIngredientParse(all = true)
+
+        val line = repo.ingredientsFor(RecipeId("r")).single()
+        assertEquals(3.0, line.quantity?.min)
+        assertEquals("shallots", line.itemText)
+        assertEquals("2 onions", line.rawText, "the publisher's line still stands behind it")
+    }
+
     @Test
     fun `deleting a recipe takes everything hanging off it`() {
         val repo = repository()

@@ -132,6 +132,23 @@ SELECT * FROM recipe WHERE id = ?;
 selectIngredientsForRecipe:
 SELECT * FROM ingredient_line WHERE recipe_id = ? ORDER BY position;
 
+-- The parse reads the line as the reader sees it, so a line the user rewrote is parsed
+-- from their wording rather than the publisher's.
+allIngredientLines:
+SELECT id, coalesce(amendment, raw_text) AS text FROM ingredient_line;
+
+ingredientsWithoutParse:
+SELECT id, coalesce(amendment, raw_text) AS text FROM ingredient_line
+WHERE parse_confidence = 0.0;
+
+setIngredientParse:
+UPDATE ingredient_line SET
+    quantity_min = ?, quantity_max = ?,
+    unit_canonical = ?, unit_system = ?,
+    unit_alt_canonical = ?, unit_alt_system = ?,
+    item_text = ?, preparation = ?, optional = ?, parse_confidence = ?
+WHERE id = ?;
+
 setStepDuration:
 UPDATE step SET duration_seconds = ? WHERE id = ?;
 

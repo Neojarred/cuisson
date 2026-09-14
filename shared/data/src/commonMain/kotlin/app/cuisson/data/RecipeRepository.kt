@@ -24,6 +24,8 @@ import app.cuisson.domain.SourceKind
 import app.cuisson.domain.Step
 import app.cuisson.domain.Timings
 import app.cuisson.text.durationInStep
+import app.cuisson.text.UnitKind
+import app.cuisson.text.parseIngredient
 import app.cuisson.domain.UnitSystem
 import kotlin.time.Instant
 
@@ -181,7 +183,7 @@ class RecipeRepository(private val database: CuissonDatabase) {
                 created_at = recipe.createdAt.toEpochMilliseconds(),
                 updated_at = recipe.updatedAt.toEpochMilliseconds(),
             )
-            recipe.ingredients.forEach { line ->
+            recipe.ingredients.map { it.parsedIfNeeded() }.forEach { line ->
                 queries.insertIngredientLine(
                     id = line.id,
                     recipe_id = recipe.id.value,
@@ -414,6 +416,43 @@ class RecipeRepository(private val database: CuissonDatabase) {
         }
     }
 
+    /**
+     * Reads the ingredient lines of recipes saved before the parser existed.
+     *
+     * The same pattern as the step durations, and for the same reason: asking someone to
+     * re-import their library to gain a feature is not a reasonable thing to ask. Pass
+     * all = true when the parser itself changes rather than when rows are merely missing.
+     */
+    fun backfillIngredientParse(all: Boolean = false) {
+        runCatching {
+            val pending = if (all) {
+                queries.allIngredientLines().executeAsList().map { StepText(it.id, it.text) }
+            } else {
+                queries.ingredientsWithoutParse().executeAsList()
+                    .map { StepText(it.id, it.text) }
+            }
+            if (pending.isEmpty()) return
+            database.transaction {
+                pending.forEach { row ->
+                    val read = parseIngredient(row.text)
+                    queries.setIngredientParse(
+                        quantity_min = read.quantityMin,
+                        quantity_max = read.quantityMax,
+                        unit_canonical = read.unit,
+                        unit_system = read.unit?.let { read.unitSystem.name },
+                        unit_alt_canonical = read.altUnit,
+                        unit_alt_system = read.altUnit?.let { read.altSystem.name },
+                        item_text = read.item,
+                        preparation = read.preparation,
+                        optional = if (read.optional) 1L else 0L,
+                        parse_confidence = read.confidence.toDouble(),
+                        id = row.id,
+                    )
+                }
+            }
+        }
+    }
+
     /** Written with one tap at the end of Cook Mode. */
     fun logCook(id: RecipeId, at: Long, entryId: String) =
         queries.insertCookEntry(entryId, id.value, at, null, null)
@@ -488,6 +527,39 @@ class RecipeRepository(private val database: CuissonDatabase) {
                     ?: emptyList(),
             )
         }
+}
+
+/**
+ * Reads a line that has not been read yet.
+ *
+ * Done here rather than at import so that no path can produce an unparsed line, which is
+ * the mistake the step durations made: the parser existed, the tests passed, and every
+ * recipe arrived without one because only one caller remembered to ask.
+ */
+private fun IngredientLine.parsedIfNeeded(): IngredientLine {
+    if (parseConfidence > 0f) return this
+    val read = parseIngredient(text)
+    return copy(
+        quantity = read.quantityMin?.let { QuantityRange(it, read.quantityMax ?: it) },
+        unit = read.unit?.let { canonical ->
+            MeasureUnit(
+                canonical = canonical,
+                system = read.unitSystem.toDomain(),
+                alternate = read.altUnit?.let { MeasureUnit(it, read.altSystem.toDomain()) },
+            )
+        },
+        itemText = read.item,
+        preparation = read.preparation,
+        optional = read.optional,
+        parseConfidence = read.confidence,
+    )
+}
+
+private fun UnitKind.toDomain(): UnitSystem = when (this) {
+    UnitKind.METRIC -> UnitSystem.METRIC
+    UnitKind.IMPERIAL -> UnitSystem.IMPERIAL
+    UnitKind.COUNT -> UnitSystem.COUNT
+    UnitKind.NONE -> UnitSystem.NONE
 }
 
 private fun String?.toUnitSystem(): UnitSystem =
